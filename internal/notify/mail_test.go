@@ -1,0 +1,145 @@
+package notify
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/RedHiwiK/HiwiKInsight/internal/appstore"
+	"github.com/RedHiwiK/HiwiKInsight/internal/i18n"
+	"github.com/RedHiwiK/HiwiKInsight/internal/store"
+	"github.com/RedHiwiK/HiwiKInsight/internal/tz"
+)
+
+func TestMain(m *testing.M) {
+	tz.MustSet("America/New_York")
+	os.Exit(m.Run())
+}
+
+var testProducts = map[string]string{
+	"com.example.pawprint.pro.lifetime": "Lifetime",
+	"com.example.ledger.pro.yearly":     "Yearly",
+	"com.example.ledger.pro.monthly":    "Monthly",
+}
+
+func productName(id string) string {
+	if n := testProducts[id]; n != "" {
+		return n
+	}
+	return id
+}
+
+var contexts = map[string]string{"record_limit": "Record limit"}
+
+func contextLabel(c string) string {
+	if n := contexts[c]; n != "" {
+		return n
+	}
+	return c
+}
+
+func payload(typ, subtype, bundle, env string) *appstore.NotificationPayload {
+	p := &appstore.NotificationPayload{NotificationType: typ, Subtype: subtype, NotificationUUID: "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0", SignedDate: time.Now().UnixMilli()}
+	p.Data.BundleID, p.Data.Environment = bundle, env
+	return p
+}
+
+func f(v float64) *float64 { return &v }
+
+func scenarios() map[string]mailInput {
+	now := time.Now().UnixMilli()
+	reason := 1
+	base := func(in mailInput) mailInput {
+		in.ProductName, in.ContextLabel, in.Commission, in.Currency = productName, contextLabel, 0.15, "USD"
+		return in
+	}
+	return map[string]mailInput{
+		"purchase": base(mailInput{
+			AppName: "Pawprint",
+			Payload: payload("ONE_TIME_CHARGE", "", "com.example.pawprint", "Production"),
+			Tx: &appstore.TransactionInfo{TransactionID: "2000000812345678", OriginalTransactionID: "2000000812345678",
+				ProductID: "com.example.pawprint.pro.lifetime", Type: "Non-Consumable", Storefront: "USA",
+				Currency: "USD", Price: 9990, PurchaseDate: now, TransactionReason: "PURCHASE", InAppOwnershipType: "PURCHASED",
+				AppAccountToken: "6f1c2b8e-0d4a-4f7e-9a51-3c2b1d0e9f8a"},
+			Amount: f(9.99),
+			Stats:  &store.Stats{Today: store.Period{Sales: 3, Net: 29.97}, Month: store.Period{Sales: 41, Refunds: 1, Net: 399.6}},
+			Attribution: &store.Attribution{Context: "record_limit", InstallDay: 12, PaywallViews: 3, AppVersion: "2.4.5",
+				Device: "iPhone 16 Pro", OSVersion: "26.1", InstallID: "5b0c2f4e-1111-4a2b-9c3d-000000000001"},
+		}),
+		"renewal-eur": base(mailInput{
+			AppName: "Ledger",
+			Payload: payload("DID_RENEW", "", "com.example.ledger", "Sandbox"),
+			Tx: &appstore.TransactionInfo{TransactionID: "2000000899990002", OriginalTransactionID: "2000000899990001",
+				ProductID: "com.example.ledger.pro.yearly", Type: "Auto-Renewable Subscription", Storefront: "DEU",
+				Currency: "EUR", Price: 19990, PurchaseDate: now, OriginalPurchaseDate: now - 365*24*3600*1000,
+				ExpiresDate: now + 365*24*3600*1000, TransactionReason: "RENEWAL", OfferType: 1, OfferDiscountType: "PAY_UP_FRONT"},
+			Renewal: &appstore.RenewalInfo{AutoRenewStatus: 1, AutoRenewProductID: "com.example.ledger.pro.monthly", RenewalPrice: 2990, Currency: "EUR"},
+			Amount:  f(21.7),
+			Stats:   &store.Stats{Today: store.Period{Sales: 1, Net: 21.7}, Month: store.Period{Sales: 6, Net: 110.5, Unconverted: 1}},
+		}),
+		"refund": base(mailInput{
+			AppName: "Pawprint",
+			Payload: payload("REFUND", "", "com.example.pawprint", "Production"),
+			Tx: &appstore.TransactionInfo{TransactionID: "2000000812345678", OriginalTransactionID: "2000000812345678",
+				ProductID: "com.example.pawprint.pro.lifetime", Type: "Non-Consumable", Storefront: "HKG",
+				Currency: "HKD", Price: 78000, PurchaseDate: now - 3*24*3600*1000, RevocationDate: now, RevocationReason: &reason},
+			Amount: f(10.0),
+			Stats:  &store.Stats{Today: store.Period{Sales: 2, Refunds: 1, Net: 9.98}, Month: store.Period{Sales: 41, Refunds: 2, Net: 389.6}},
+		}),
+		"test": base(mailInput{
+			AppName: "Pawprint",
+			Payload: payload("TEST", "", "com.example.pawprint", "Sandbox"),
+			Stats:   &store.Stats{},
+		}),
+	}
+}
+
+// Covers purchase / foreign-currency renewal / refund / test emails in both languages.
+// With PREVIEW_DIR set, the HTML is also written there for a visual check.
+func TestRenderScenarios(t *testing.T) {
+	defer i18n.Set("en")
+	dir := os.Getenv("PREVIEW_DIR")
+	for _, lang := range []string{"en", "zh"} {
+		i18n.Set(lang)
+		for name, in := range scenarios() {
+			v := buildView(in)
+			html, err := renderHTML(v)
+			if err != nil {
+				t.Fatalf("%s/%s: render html: %v", lang, name, err)
+			}
+			text := renderText(v)
+			if v.Subject == "" || !strings.Contains(html, in.AppName) || !strings.Contains(text, in.AppName) {
+				t.Fatalf("%s/%s: incomplete output", lang, name)
+			}
+			if dir != "" {
+				os.WriteFile(filepath.Join(dir, lang+"-"+name+".html"), []byte("<!-- "+v.Subject+" -->\n"+html), 0o644)
+				os.WriteFile(filepath.Join(dir, lang+"-"+name+".txt"), []byte(v.Subject+"\n\n"+text), 0o644)
+			}
+		}
+	}
+
+	i18n.Set("en")
+	s := scenarios()
+	if v := buildView(s["purchase"]); v.Subject != "Pawprint · Purchase +$9.99 Lifetime (United States) · sale #3 today" {
+		t.Errorf("unexpected purchase subject: %q", v.Subject)
+	}
+	if v := buildView(s["refund"]); v.Amount != "-HK$78.00" || !strings.Contains(v.AmountNote, "≈ $10.00") {
+		t.Errorf("unexpected refund amount: %q / %q", v.Amount, v.AmountNote)
+	}
+	text := renderText(buildView(s["purchase"]))
+	for _, want := range []string{"Entry point: Record limit", "Install age: day 12", "Paywall views: paywall view #3", "Device: iPhone 16 Pro / iOS 26.1"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("purchase mail missing %q:\n%s", want, text)
+		}
+	}
+	if text := renderText(buildView(s["refund"])); !strings.Contains(text, "Entry point: Unattributed") {
+		t.Errorf("refund mail should be unattributed:\n%s", text)
+	}
+
+	i18n.Set("zh")
+	if v := buildView(s["purchase"]); v.Subject != "Pawprint · 新购买 +$9.99 Lifetime (美国) · 今日第 3 笔" {
+		t.Errorf("unexpected zh purchase subject: %q", v.Subject)
+	}
+}

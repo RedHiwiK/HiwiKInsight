@@ -1,0 +1,8 @@
+.git
+web/node_modules
+web/dist/app
+dist
+data
+demo-data
+*.db
+*.db-*

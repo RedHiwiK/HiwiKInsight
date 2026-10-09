@@ -1,0 +1,33 @@
+# Production deployment: HiwiKInsight behind Caddy, which obtains HTTPS certificates automatically.
+#
+#   1. cp examples/config.example.yaml config/config.yaml and edit it (apps, timezone, users, ...)
+#      Put event catalogs in config/catalogs/ and reference them as catalogs/<app>.yaml.
+#   2. cp deploy/.env.example .env and fill in DOMAIN plus the secrets referenced from config.yaml.
+#   3. docker compose up -d
+#
+# See docs/deployment.md for details, backups and upgrades.
+services:
+  hiwikinsight:
+    image: ghcr.io/redhiwik/hiwikinsight:latest
+    # build: .   # or build from source
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./config:/etc/hiwikinsight:ro
+      - data:/data
+    expose:
+      - "8080"
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy:/data
+volumes:
+  data:
+  caddy:

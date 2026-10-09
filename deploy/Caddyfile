@@ -1,0 +1,5 @@
+# Caddy obtains and renews a TLS certificate for $DOMAIN automatically.
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy hiwikinsight:8080
+}

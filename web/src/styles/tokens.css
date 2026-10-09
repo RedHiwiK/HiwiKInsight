@@ -1,0 +1,191 @@
+/*
+ * Design tokens: the single source of colors, font sizes and radii.
+ * Components and charts only reference these variables; never hardcode color values.
+ */
+
+:root {
+  --bg: #F2F2F7;
+  --surface: #FFFFFF;
+  --surface-2: #F2F2F7;
+  --surface-3: #E5E5EA;
+  --border: #E5E5EA;
+  --border-strong: #D1D1D6;
+  --text: #1D1D1F;
+  --text-2: #6E6E73;
+  --text-3: #8E8E93;
+  --primary: #5B57E8;
+  --primary-soft: color-mix(in srgb, var(--primary) 12%, transparent);
+  --on-primary: #FFFFFF;
+  --success: #17A06B;
+  --danger: #E5484D;
+  --warning: #E09A2F;
+
+  --c1: #5B57E8;
+  --c2: #1FAE9B;
+  --c3: #F08C3A;
+  --c4: #E0558A;
+  --c5: #3D8FE0;
+  --c6: #9A6FE0;
+  --c7: #7FA83A;
+  --c8: #C9A227;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 4%), 0 2px 12px rgb(0 0 0 / 3%);
+  --shadow-pop: 0 8px 24px rgb(16 16 24 / 12%);
+  --glow: color-mix(in srgb, var(--primary) 8%, transparent);
+  /* System fill: segmented control track, pill button background, hover (like iOS tertiarySystemFill) */
+  --fill: rgb(118 118 128 / 12%);
+  --fill-strong: rgb(118 118 128 / 20%);
+
+  color-scheme: light;
+}
+
+/* Dark: follows the system (unless light was picked manually), or picked manually */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000;
+    --surface: #1C1C1E;
+    --surface-2: #2C2C2E;
+    --surface-3: #3A3A3C;
+    --border: #2C2C2E;
+    --border-strong: #48484A;
+    --text: #F5F5F7;
+    --text-2: #AEAEB2;
+    --text-3: #8E8E93;
+    --primary: #7E7AF7;
+    --primary-soft: color-mix(in srgb, var(--primary) 18%, transparent);
+    --success: #34C38A;
+    --danger: #F26D71;
+    --warning: #F0B454;
+    --c1: #7E7AF7;
+    --c2: #35C7B3;
+    --c3: #F5A25C;
+    --c4: #EC77A1;
+    --c5: #62A8EE;
+    --c6: #B18FEB;
+    --c7: #9BC256;
+    --c8: #DDB947;
+    --shadow-card: none;
+    --shadow-pop: 0 8px 24px rgb(0 0 0 / 40%);
+    --seg-active: #636366;
+    --fill: rgb(118 118 128 / 24%);
+    --fill-strong: rgb(118 118 128 / 32%);
+    --material-edge: color-mix(in srgb, var(--text) 8%, transparent);
+    --scrim: rgb(0 0 0 / 45%);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #000000;
+  --surface: #1C1C1E;
+  --surface-2: #2C2C2E;
+  --surface-3: #3A3A3C;
+  --border: #2C2C2E;
+  --border-strong: #48484A;
+  --text: #F5F5F7;
+  --text-2: #AEAEB2;
+  --text-3: #8E8E93;
+  --primary: #7E7AF7;
+  --primary-soft: color-mix(in srgb, var(--primary) 18%, transparent);
+  --success: #34C38A;
+  --danger: #F26D71;
+  --warning: #F0B454;
+  --c1: #7E7AF7;
+  --c2: #35C7B3;
+  --c3: #F5A25C;
+  --c4: #EC77A1;
+  --c5: #62A8EE;
+  --c6: #B18FEB;
+  --c7: #9BC256;
+  --c8: #DDB947;
+  --shadow-card: none;
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 40%);
+  --seg-active: #636366;
+  --fill: rgb(118 118 128 / 24%);
+  --fill-strong: rgb(118 118 128 / 32%);
+  --material-edge: color-mix(in srgb, var(--text) 8%, transparent);
+  --scrim: rgb(0 0 0 / 45%);
+  color-scheme: dark;
+}
+
+:root {
+  /* Selected segment: surface in light mode, surface-3 in dark mode */
+  --seg-active: var(--surface);
+  /* Fixed semantic colors */
+  --seg-new: var(--c2);
+  --seg-returning: var(--c1);
+  --seg-resurrected: var(--c3);
+  --tier-heavy: var(--c1);
+  --tier-medium: var(--c5);
+  --tier-light: var(--c2);
+  --tier-once: var(--text-3);
+  --tier-dormant: var(--border-strong);
+  --money: var(--success);
+  --refund: var(--danger);
+
+  /* Sequential scale: surface-3 -> primary */
+  --heat-0: var(--surface-3);
+  --heat-1: color-mix(in srgb, var(--primary) 20%, var(--surface));
+  --heat-2: color-mix(in srgb, var(--primary) 40%, var(--surface));
+  --heat-3: color-mix(in srgb, var(--primary) 65%, var(--surface));
+  --heat-4: var(--primary);
+
+  --radius-sm: 10px;
+  --radius: 20px;
+  --radius-lg: 26px;
+  --dur: 160ms;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+
+  /*
+   * Springs: damped oscillation curves sampled with linear(); they start from the current value and are interruptible.
+   * spring: critically damped, damping 1.0 / response 0.35, no bounce; the default
+   * spring-bounce: damping 0.8 / response 0.3, only for interactions with momentum (switches, drawers)
+   */
+  --spring: linear(0, 0.045, 0.147, 0.268, 0.39, 0.501, 0.599, 0.682, 0.75, 0.805, 0.849, 0.884, 0.911, 0.932, 0.949, 0.961, 0.971, 0.978, 0.984, 0.988, 0.991, 0.993, 0.995, 0.996, 1);
+  --spring-dur: 450ms;
+  --spring-bounce: linear(0, 0.068, 0.217, 0.39, 0.554, 0.694, 0.803, 0.884, 0.94, 0.976, 0.998, 1.01, 1.014, 1.015, 1.014, 1.011, 1.009, 1.006, 1.004, 1.003, 1.001, 1.001, 1, 1, 1, 1, 1, 1, 1);
+  --spring-bounce-dur: 550ms;
+  /* Scale applied on press for immediate feedback */
+  --press-scale: 0.97;
+
+  /* Materials: translucency + background blur, content scrolls underneath */
+  --material-chrome: color-mix(in srgb, var(--bg) 72%, transparent);
+  --material-bar: color-mix(in srgb, var(--surface) 70%, transparent);
+  --material-pop: color-mix(in srgb, var(--surface) 84%, transparent);
+  --material-blur: saturate(180%) blur(20px);
+  --material-edge: color-mix(in srgb, var(--surface) 55%, transparent);
+  --scrim: color-mix(in srgb, var(--text) 18%, transparent);
+
+  /* Tracking varies with font size: tighter for large text, 0 for body, slightly looser for small text */
+  --track-display: -0.022em;
+  --track-title: -0.022em;
+  --track-large: -0.026em;
+  --track-heading: -0.008em;
+  --track-caption: 0.01em;
+
+  --font: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
+  /* Large numbers use the rounded face (SF Pro Rounded); non-Apple platforms fall back to the body font */
+  --font-rounded: ui-rounded, "SF Pro Rounded", var(--font);
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* Reduced transparency: solid materials, no blur */
+@media (prefers-reduced-transparency: reduce) {
+  :root:root:root {
+    --material-chrome: var(--bg);
+    --material-bar: var(--surface);
+    --material-pop: var(--surface);
+    --material-blur: none;
+  }
+}
+
+/* Increased contrast: solid materials and stronger borders */
+@media (prefers-contrast: more) {
+  :root:root:root {
+    --material-chrome: var(--bg);
+    --material-bar: var(--surface);
+    --material-pop: var(--surface);
+    --material-blur: none;
+    --border: var(--border-strong);
+  }
+}

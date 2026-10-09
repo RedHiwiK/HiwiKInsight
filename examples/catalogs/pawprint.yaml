@@ -1,0 +1,101 @@
+# Event catalog for Pawprint, a pet journal (demo app).
+# Modules group screens for module_usage; events document every name the app sends.
+# Free-form comments like this one are shown verbatim to people and AI assistants.
+
+app: pawprint
+display_name: Pawprint
+
+modules:
+  onboarding: First-launch welcome and pet setup
+  timeline: Journal timeline, entry details and search
+  entry: Creating and editing journal entries
+  pet: Pet profiles
+  health: Weight chart and health records
+  reminder: Care reminders (vaccines, deworming, grooming)
+  settings: Settings, export and iCloud sync
+  paywall: Pawprint Pro purchase screen
+
+screens:
+  welcome: Onboarding welcome page (onboarding)
+  pet_setup: Onboarding, add the first pet (onboarding)
+  timeline: Home timeline of journal entries (timeline)
+  entry_detail: A single journal entry (timeline)
+  search: Search entries (timeline)
+  new_entry: Entry editor (entry)
+  pet_profile: Pet profile page (pet)
+  weight_chart: Weight history chart (health)
+  health_records: Vaccines, vet visits and medications (health)
+  reminder_list: All reminders (reminder)
+  new_reminder: Reminder editor (reminder)
+  settings: Settings (settings)
+  export: Export journal as PDF or CSV (settings)
+  paywall: Pawprint Pro offer (paywall)
+
+events:
+  # SDK built-ins
+  - name: app.installed
+    desc: First launch with the SDK on this install
+    params: {original_download_ts: "App Store first download time (ms); earlier than the event for users who installed before the SDK"}
+  - name: session.started
+    desc: App came to the foreground
+    params: {source: "icon, widget or notification"}
+  - name: session.ended
+    desc: App went to the background
+    params: {duration_s: foreground seconds}
+  - name: screen.viewed
+    desc: A screen appeared
+    params: {screen: screen key, module: module key}
+  - name: screen.left
+    desc: A screen disappeared
+    params: {screen: screen key, module: module key, duration_s: seconds on screen}
+  - name: paywall.shown
+    desc: The Pro paywall was presented
+    params: {context: "record_limit, settings_banner, export_limit or onboarding"}
+  - name: paywall.cta_tap
+    desc: The buy button on the paywall was tapped
+    params: {context: paywall context, product: product ID}
+  - name: purchase.started
+    desc: StoreKit purchase started; token is the appAccountToken that links App Store notifications to this attempt
+    params: {context: paywall context, product: product ID, token: appAccountToken (UUID)}
+  - name: purchase.success
+    desc: Purchase verified on device
+    params: {context: paywall context, product: product ID}
+  - name: purchase.failed
+    desc: Purchase did not complete
+    params: {context: paywall context, product: product ID, reason: "user_cancelled, pending, verification, product_missing or system_error"}
+  - name: limit.hit
+    desc: A free user reached a free-tier limit
+    params: {limit: "entries, pets or export", context: paywall context shown next}
+  - name: error
+    desc: A handled error
+    params: {id: stable error id, category: area, message: error description}
+  - name: user.snapshot
+    desc: Daily snapshot of the user's data size, sent on the first session of the day
+    params: {pets: pet count bucket, entries: entry count bucket, is_pro: "true or false", reminders: "on or off"}
+
+  # Onboarding
+  - name: onboarding.step
+    desc: An onboarding step was completed
+    params: {module: onboarding, step: "welcome, pet or notifications"}
+  - name: onboarding.completed
+    desc: Onboarding finished
+
+  # Features
+  - name: entry.created
+    desc: A journal entry was saved
+    params: {module: entry, type: "daily, meal, walk, weight, vet or custom", photos: "0, 1 or 2-5"}
+  - name: pet.added
+    desc: A pet profile was created
+    params: {module: pet, species: "dog, cat, rabbit or other"}
+  - name: health.record_added
+    desc: A health record was saved
+    params: {module: health, kind: "weight, vaccine, vet_visit or medication"}
+  - name: reminder.created
+    desc: A care reminder was scheduled
+    params: {module: reminder, kind: "vaccine, deworm, grooming or custom"}
+  - name: share.exported
+    desc: An entry was shared as an image
+    params: {module: timeline, method: "share_sheet or save_photo"}
+  - name: export.finished
+    desc: Journal export finished
+    params: {module: settings, format: "pdf or csv", result: "success or failed"}

@@ -1,0 +1,90 @@
+# Event catalog for Trailmark, a travel-stamp collection app (demo app).
+# Modules group screens for module_usage; events document every name the app sends.
+
+app: trailmark
+display_name: Trailmark
+
+modules:
+  onboarding: First-launch welcome and location permission
+  map: Map of collected and nearby stamps
+  stamp: Collecting a stamp at a place
+  collection: Stamp book and badges
+  trip: Trips that group stamps
+  settings: Settings and iCloud sync
+  paywall: Trailmark Pass purchase screen
+
+screens:
+  welcome: Onboarding welcome page (onboarding)
+  location_permission: Onboarding, location permission primer (onboarding)
+  map: Home map (map)
+  place_detail: A place and its stamp (map)
+  stamp_capture: Collect a stamp (stamp)
+  stamp_book: All collected stamps (collection)
+  badges: Badges earned (collection)
+  trip_list: Trips (trip)
+  new_trip: Trip editor (trip)
+  settings: Settings (settings)
+  paywall: Trailmark Pass offer (paywall)
+
+events:
+  # SDK built-ins
+  - name: app.installed
+    desc: First launch with the SDK on this install
+    params: {original_download_ts: "App Store first download time (ms); earlier than the event for users who installed before the SDK"}
+  - name: session.started
+    desc: App came to the foreground
+    params: {source: "icon, widget or notification"}
+  - name: session.ended
+    desc: App went to the background
+    params: {duration_s: foreground seconds}
+  - name: screen.viewed
+    desc: A screen appeared
+    params: {screen: screen key, module: module key}
+  - name: screen.left
+    desc: A screen disappeared
+    params: {screen: screen key, module: module key, duration_s: seconds on screen}
+  - name: paywall.shown
+    desc: The Pass paywall was presented
+    params: {context: "record_limit, settings_banner or onboarding"}
+  - name: paywall.cta_tap
+    desc: The buy button on the paywall was tapped
+    params: {context: paywall context, product: product ID}
+  - name: purchase.started
+    desc: StoreKit purchase started; token is the appAccountToken that links App Store notifications to this attempt
+    params: {context: paywall context, product: product ID, token: appAccountToken (UUID)}
+  - name: purchase.success
+    desc: Purchase or free trial verified on device
+    params: {context: paywall context, product: product ID}
+  - name: purchase.failed
+    desc: Purchase did not complete
+    params: {context: paywall context, product: product ID, reason: "user_cancelled, pending, verification, product_missing or system_error"}
+  - name: limit.hit
+    desc: A free user reached a free-tier limit
+    params: {limit: "stamps or trips", context: paywall context shown next}
+  - name: error
+    desc: A handled error
+    params: {id: stable error id, category: area, message: error description}
+  - name: user.snapshot
+    desc: Daily snapshot of the user's data size, sent on the first session of the day
+    params: {stamps: stamp count bucket, trips: trip count bucket, is_pro: "true or false"}
+
+  # Onboarding
+  - name: onboarding.step
+    desc: An onboarding step was completed
+    params: {module: onboarding, step: "welcome or location"}
+  - name: onboarding.completed
+    desc: Onboarding finished
+
+  # Features
+  - name: stamp.collected
+    desc: A stamp was collected at a place
+    params: {module: stamp, method: "gps, photo or manual", result: "success or failed"}
+  - name: trip.created
+    desc: A trip was created
+    params: {module: trip, kind: "city, road_trip or hike"}
+  - name: collection.shared
+    desc: The stamp book or a badge was shared
+    params: {module: collection, method: "share_sheet or save_photo"}
+  - name: badge.earned
+    desc: A badge was unlocked
+    params: {module: collection, badge: badge key}

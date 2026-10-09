@@ -1,0 +1,156 @@
+# HiwiKInsight reference configuration.
+#
+# Copy this file to config.yaml, edit it, then check it with:
+#
+#   hiwikinsight check-config -config config.yaml
+#
+# Any value may reference an environment variable as ${NAME} or ${NAME:-default}.
+# Keep secrets (password hashes, tokens, SMTP password, App Store Connect keys) in the
+# environment rather than in this file. Relative paths (data_dir, catalogs, key_path)
+# are resolved against the directory of this file, not the working directory.
+#
+# Values shown are the defaults unless the comment says otherwise.
+
+# HTTP address to listen on, e.g. ":8080" or "127.0.0.1:8080" behind a reverse proxy.
+listen: ":8080"
+
+# How users and the SDK reach this server; used in docs, emails and links.
+public_url: https://insight.example.com
+
+# Holds the SQLite database (hiwikinsight.db) and the dashboard session secret.
+# Default: $HIWIKINSIGHT_DATA_DIR (set to /data in the container image), otherwise
+# ./data next to this file. Set it explicitly for binary installs, e.g.:
+# data_dir: /var/lib/hiwikinsight
+
+# IANA time zone that defines a "day" for every metric, report and alert.
+timezone: America/New_York
+
+# Language of emails, reports and alerts: en or zh.
+language: en
+
+# Base currency (ISO 4217) that revenue is converted to and stored in.
+currency: USD
+
+# Apple's commission used to estimate proceeds in transaction emails:
+# 0.15 for the App Store Small Business Program, 0.30 otherwise.
+commission_rate: 0.15
+
+# How long raw events are kept. Derived tables (installs, daily activity,
+# purchase attribution) are kept forever.
+retention_days: 365
+
+# Apps that send SDK events and/or App Store data to this server.
+apps:
+  - # Identifies the app everywhere: SDK appKey, ?app= in the query API, CLI --app.
+    # Lowercase letters, digits, - and _.
+    key: pawprint
+    # Links App Store server notifications and App Store Connect reports to the app. Required.
+    bundle_id: com.example.pawprint
+    # Display name; defaults to key.
+    name: Pawprint
+    # Dashboard palette slot: purple, teal, orange, pink, blue, violet, green or gold.
+    # Apps without a color take the remaining slots in config order.
+    color: orange
+    # Event catalog (modules, screens, events) shown to people and AI assistants.
+    catalog: catalogs/pawprint.yaml
+    # Product ID -> display name, used in emails and the dashboard.
+    products:
+      com.example.pawprint.pro.lifetime: Pawprint Pro (Lifetime)
+    # Purchase context sent by the SDK -> display name.
+    paywall_contexts:
+      record_limit: Record limit
+      settings_banner: Settings banner
+      export_limit: Export limit
+      onboarding: Onboarding
+
+  - key: ledgerly
+    bundle_id: com.example.ledgerly
+    name: Ledgerly
+    color: teal
+    catalog: catalogs/ledgerly.yaml
+    products:
+      com.example.ledgerly.plus.monthly: Ledgerly Plus (Monthly)
+      com.example.ledgerly.plus.yearly: Ledgerly Plus (Yearly)
+    paywall_contexts:
+      record_limit: Record limit
+      settings_banner: Settings banner
+      export_limit: Export limit
+      onboarding: Onboarding
+
+  - key: trailmark
+    bundle_id: com.example.trailmark
+    name: Trailmark
+    color: purple
+    catalog: catalogs/trailmark.yaml
+    products:
+      com.example.trailmark.pass.yearly: Trailmark Pass (Yearly)
+      com.example.trailmark.pass.lifetime: Trailmark Pass (Lifetime)
+    paywall_contexts:
+      record_limit: Record limit
+      settings_banner: Settings banner
+      onboarding: Onboarding
+
+dashboard:
+  # Serve the web dashboard under /dashboard.
+  enabled: true
+  # Who can sign in. Create a hash with: hiwikinsight hash-password
+  users:
+    - username: admin
+      password_hash: ${HIWIKINSIGHT_ADMIN_HASH}
+  # How long a sign-in lasts (Go duration). Default 720h (30 days).
+  session_ttl: 720h
+  # Disable sign-in entirely. Only allowed when listen is a loopback address.
+  insecure_no_auth: false
+
+query:
+  # Tokens accepted as "Authorization: Bearer <token>" on /v1/query/* (CLI, scripts, AI assistants).
+  # Without tokens the query API is only reachable from a signed-in dashboard session.
+  tokens:
+    - ${HIWIKINSIGHT_QUERY_TOKEN}
+
+ingest:
+  # Maximum events accepted per install per day (abuse guard).
+  daily_cap: 5000
+
+# SMTP for transaction emails, reports and alerts. Without smtp_host and to, mail is only logged.
+mail:
+  smtp_host: smtp.example.com
+  # 465 uses implicit TLS; any other port (usually 587) upgrades with STARTTLS.
+  smtp_port: 465
+  username: insight@example.com
+  password: ${SMTP_PASSWORD}
+  # Defaults to username.
+  from: insight@example.com
+  to:
+    - you@example.com
+
+reports:
+  # Daily report for yesterday and weekly report for the previous week.
+  daily: true
+  weekly: true
+  # Hour (0-23, reporting time zone) after which the daily report is sent.
+  hour: 9
+
+alerts:
+  enabled: true
+  # An existing error affecting at least this many users within an hour alerts.
+  spike_users: 3
+  # Alert when the newest App Store Connect daily report is older than this many days.
+  report_stale_days: 3
+  # Alert when an app that had events in the previous week sends nothing for this many hours.
+  silent_hours: 48
+  # Error ids that alert on their first occurrence.
+  payment_errors:
+    - purchase
+    - restore
+    - products.load
+
+# App Store Connect API key (Users and Access > Integrations > App Store Connect API) for
+# sales and analytics reports. Leave out to disable report sync.
+app_store_connect:
+  key_id: ${ASC_KEY_ID}
+  issuer_id: ${ASC_ISSUER_ID}
+  # The .p8 private key downloaded from App Store Connect.
+  key_path: ./AuthKey.p8
+  # Payments and Financial Reports > vendor number.
+  vendor_number: ${ASC_VENDOR_NUMBER}

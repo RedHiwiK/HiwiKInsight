@@ -1,0 +1,217 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+/* Let Tailwind utilities use the tokens directly: bg-surface, text-text-2, border-border ... */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-fill: var(--fill);
+  --color-fill-strong: var(--fill-strong);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary: var(--on-primary);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+
+  --radius-sm: var(--radius-sm);
+  --radius-card: var(--radius);
+  --radius-lg: var(--radius-lg);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+
+  --font-sans: var(--font);
+  --font-mono: var(--mono);
+  --font-rounded: var(--font-rounded);
+
+  /* Font size tokens */
+  --text-large: 34px;
+  --text-large--line-height: 41px;
+  --text-large--font-weight: 700;
+  --text-large--letter-spacing: var(--track-large);
+  --text-display: 32px;
+  --text-display--line-height: 38px;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: var(--track-display);
+  --text-title: 22px;
+  --text-title--line-height: 28px;
+  --text-title--font-weight: 700;
+  --text-title--letter-spacing: var(--track-title);
+  --text-heading: 17px;
+  --text-heading--line-height: 22px;
+  --text-heading--font-weight: 600;
+  --text-heading--letter-spacing: var(--track-heading);
+  --text-body: 14px;
+  --text-body--line-height: 22px;
+  --text-small: 13px;
+  --text-small--line-height: 20px;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--font-weight: 500;
+  --text-caption--letter-spacing: var(--track-caption);
+}
+
+html, body, #root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 22px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv11";
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Inputs already change their border on focus; no extra outline */
+input:focus-visible {
+  outline: none;
+}
+
+::selection {
+  background: var(--primary-soft);
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
+  background-size: 800px 100%;
+  animation: shimmer 1.2s linear infinite;
+  border-radius: var(--radius-sm);
+}
+
+.transition-ui {
+  transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease), opacity var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+
+/*
+ * ---------- Motion and materials ----------
+ */
+
+/* Immediate press feedback: shrink on pointer-down, spring back on release; the transform transition is interruptible */
+.press {
+  transition: transform var(--spring-dur) var(--spring), background-color var(--dur) var(--ease),
+    color var(--dur) var(--ease), border-color var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+.press:active:not(:disabled) {
+  transform: scale(var(--press-scale));
+  transition-duration: 80ms;
+  transition-timing-function: ease-out;
+}
+
+/* Translucent materials: navigation, top bar and popovers float above the content */
+@utility material-chrome {
+  background: var(--material-chrome);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+}
+.material-bar {
+  background: var(--material-bar);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+}
+.material-pop {
+  background: var(--material-pop);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  box-shadow: inset 0 1px 0 var(--material-edge), var(--shadow-pop);
+}
+
+/* Scroll edge: no hard divider under the top bar, only a fade once content actually scrolls underneath */
+@utility scroll-edge {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 -12px 0;
+    height: 12px;
+    pointer-events: none;
+    background: linear-gradient(to bottom, var(--material-chrome), transparent);
+    opacity: 0;
+    transition: opacity var(--dur) var(--ease);
+  }
+  &[data-scrolled="true"]::after {
+    opacity: 1;
+  }
+}
+
+/* Popovers "grow" from their trigger: scale up + unblur, not just a fade. transform-origin is set by the component */
+.pop-in {
+  transition: opacity 180ms var(--ease), transform var(--spring-dur) var(--spring), filter 180ms var(--ease);
+}
+@starting-style {
+  .pop-in {
+    opacity: 0;
+    transform: scale(0.96);
+    filter: blur(4px);
+  }
+}
+
+/* Shared enter/exit driven by data-state; both directions follow the same path (spatial consistency) */
+.sheet-top {
+  transition: transform var(--spring-bounce-dur) var(--spring-bounce), opacity 200ms var(--ease);
+}
+.sheet-top[data-state="closed"] {
+  transform: translateY(-16px) scale(0.98);
+  opacity: 0;
+  transition: transform 220ms var(--ease), opacity 180ms var(--ease);
+}
+@starting-style {
+  .sheet-top[data-state="open"] {
+    transform: translateY(-16px) scale(0.98);
+    opacity: 0;
+  }
+}
+.fade-scrim {
+  transition: opacity 240ms var(--ease);
+}
+.fade-scrim[data-state="closed"] {
+  opacity: 0;
+}
+@starting-style {
+  .fade-scrim[data-state="open"] {
+    opacity: 0;
+  }
+}
+
+/* Reduced motion: no translation, scaling or bounce; only a short opacity change */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; }
+  .press:active:not(:disabled) { transform: none; }
+  .pop-in, .sheet-top, .sheet-top[data-state="closed"] {
+    transform: none !important;
+    filter: none !important;
+    transition: opacity 150ms linear !important;
+  }
+  .seg-thumb, .switch-thumb { transition: none !important; }
+}
+
+/* Thin scrollbars */
+.scroll-thin { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }

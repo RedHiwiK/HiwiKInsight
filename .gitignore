@@ -1,0 +1,19 @@
+# build output
+/bin/
+/dist/
+web/node_modules/
+web/dist/app/
+*.tsbuildinfo
+
+# local data and secrets
+/data/
+/demo-data/
+/config/
+*.db
+*.db-shm
+*.db-wal
+*.p8
+.env
+session.key
+
+.DS_Store

@@ -1,0 +1,28 @@
+# systemd unit for a binary install (see docs/deployment.md).
+#   sudo useradd --system --home /var/lib/hiwikinsight --shell /usr/sbin/nologin hiwikinsight
+#   sudo install -m 755 hiwikinsight insight /usr/local/bin/
+#   sudo install -d -o hiwikinsight -m 750 /var/lib/hiwikinsight /etc/hiwikinsight
+#   sudo cp config.yaml /etc/hiwikinsight/ && sudo cp hiwikinsight.service /etc/systemd/system/
+#   sudo systemctl enable --now hiwikinsight
+[Unit]
+Description=HiwiKInsight analytics server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=hiwikinsight
+Group=hiwikinsight
+ExecStart=/usr/local/bin/hiwikinsight serve -config /etc/hiwikinsight/config.yaml
+# Optional: secrets referenced from config.yaml as ${NAME}
+EnvironmentFile=-/etc/hiwikinsight/env
+Restart=on-failure
+RestartSec=5
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/hiwikinsight
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+# Try HiwiKInsight with three sample apps and 90 days of generated data:
+#
+#   docker compose -f docker-compose.demo.yml up --build
+#
+# then open http://localhost:8080/dashboard/ and sign in with demo / demo.
+# The query API accepts the token "demo-token". Data lives in the "demo" volume;
+# `docker compose -f docker-compose.demo.yml down -v` starts over.
+services:
+  hiwikinsight:
+    build: .
+    command: ["demo", "-data", "/data", "-listen", ":8080"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - demo:/data
+volumes:
+  demo:

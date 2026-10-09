@@ -1,0 +1,99 @@
+# Event catalog for Ledgerly, a personal finance app (demo app).
+# Modules group screens for module_usage; events document every name the app sends.
+
+app: ledgerly
+display_name: Ledgerly
+
+modules:
+  onboarding: First-launch welcome and currency setup
+  dashboard: Home overview, monthly report and charts
+  ledger: Transactions list, editor and receipt scanning
+  assets: Accounts and net worth
+  budget: Budgets and category limits
+  settings: Settings, export and iCloud sync
+  paywall: Ledgerly Plus subscription screen
+
+screens:
+  welcome: Onboarding welcome page (onboarding)
+  currency_setup: Onboarding, pick the main currency (onboarding)
+  dashboard: Home overview (dashboard)
+  report: Monthly report (dashboard)
+  transactions: Transactions list (ledger)
+  new_transaction: Transaction editor (ledger)
+  receipt_scan: Scan a receipt with the camera (ledger)
+  accounts: Accounts and balances (assets)
+  net_worth: Net worth chart (assets)
+  budget_list: Budgets overview (budget)
+  budget_detail: One budget and its spending (budget)
+  settings: Settings (settings)
+  export: Export transactions as CSV (settings)
+  paywall: Ledgerly Plus offer (paywall)
+
+events:
+  # SDK built-ins
+  - name: app.installed
+    desc: First launch with the SDK on this install
+    params: {original_download_ts: "App Store first download time (ms); earlier than the event for users who installed before the SDK"}
+  - name: session.started
+    desc: App came to the foreground
+    params: {source: "icon, widget or notification"}
+  - name: session.ended
+    desc: App went to the background
+    params: {duration_s: foreground seconds}
+  - name: screen.viewed
+    desc: A screen appeared
+    params: {screen: screen key, module: module key}
+  - name: screen.left
+    desc: A screen disappeared
+    params: {screen: screen key, module: module key, duration_s: seconds on screen}
+  - name: paywall.shown
+    desc: The Plus paywall was presented
+    params: {context: "record_limit, settings_banner, export_limit or onboarding"}
+  - name: paywall.cta_tap
+    desc: The subscribe button on the paywall was tapped
+    params: {context: paywall context, product: product ID}
+  - name: purchase.started
+    desc: StoreKit purchase started; token is the appAccountToken that links App Store notifications to this attempt
+    params: {context: paywall context, product: product ID, token: appAccountToken (UUID)}
+  - name: purchase.success
+    desc: Purchase or free trial verified on device
+    params: {context: paywall context, product: product ID}
+  - name: purchase.failed
+    desc: Purchase did not complete
+    params: {context: paywall context, product: product ID, reason: "user_cancelled, pending, verification, product_missing or system_error"}
+  - name: limit.hit
+    desc: A free user reached a free-tier limit
+    params: {limit: "accounts, budgets or export", context: paywall context shown next}
+  - name: error
+    desc: A handled error
+    params: {id: stable error id, category: area, message: error description}
+  - name: user.snapshot
+    desc: Daily snapshot of the user's data size, sent on the first session of the day
+    params: {accounts: account count bucket, transactions: transaction count bucket, budgets: budget count bucket, is_pro: "true or false"}
+
+  # Onboarding
+  - name: onboarding.step
+    desc: An onboarding step was completed
+    params: {module: onboarding, step: "welcome, currency or first_account"}
+  - name: onboarding.completed
+    desc: Onboarding finished
+
+  # Features
+  - name: transaction.added
+    desc: A transaction was saved
+    params: {module: ledger, kind: "expense, income or transfer", method: "manual, quick_add or widget"}
+  - name: receipt.scanned
+    desc: A receipt was recognized from a photo
+    params: {module: ledger, result: "success or failed"}
+  - name: account.added
+    desc: An account was created
+    params: {module: assets, type: "bank, card, cash or investment"}
+  - name: budget.created
+    desc: A budget was created
+    params: {module: budget, period: "monthly or weekly"}
+  - name: report.viewed
+    desc: The monthly report was opened
+    params: {module: dashboard, range: "month, quarter or year"}
+  - name: export.finished
+    desc: Transaction export finished
+    params: {module: settings, format: csv, result: "success or failed"}
