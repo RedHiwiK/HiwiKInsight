@@ -19,7 +19,7 @@ Any value may reference an environment variable:
 | `${NAME}` | The value of `NAME`, or an empty string when it is unset or empty |
 | `${NAME:-default}` | The value of `NAME`, or `default` when it is unset or empty |
 
-Expansion happens on the raw file text before YAML parsing. Use it for secrets (query tokens, SMTP password, App Store Connect credentials, password hashes) so the file itself can be committed or shared. Only the `${...}` form is expanded; a bare `$` (as in a bcrypt hash) is left alone.
+Expansion happens inside values after YAML parsing, so a secret containing `#`, `: ` or quotes is used literally and never changes the file's structure. An unquoted reference such as `smtp_port: ${SMTP_PORT:-587}` is typed after expansion, so it still decodes as a number. Use it for secrets (query tokens, SMTP password, App Store Connect credentials, password hashes) so the file itself can be committed or shared. Only the `${...}` form is expanded; a bare `$` (as in a bcrypt hash) is left alone.
 
 Two process-level variables are read directly:
 

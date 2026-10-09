@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -160,7 +161,7 @@ func (d *Duration) UnmarshalYAML(n *yaml.Node) error {
 
 var envRE = regexp.MustCompile(`\$\{([A-Za-z_][A-Za-z0-9_]*)(:-([^}]*))?\}`)
 
-// expandEnv replaces ${NAME} and ${NAME:-default}.
+// expandEnv replaces ${NAME} and ${NAME:-default} in one scalar value.
 func expandEnv(s string) string {
 	return envRE.ReplaceAllStringFunc(s, func(m string) string {
 		p := envRE.FindStringSubmatch(m)
@@ -177,7 +178,7 @@ func Load(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	c, err := Parse([]byte(expandEnv(string(b))))
+	c, err := Parse(b)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
@@ -194,19 +195,99 @@ func Load(path string) (*Config, error) {
 	return c, nil
 }
 
-// Parse decodes YAML (already env-expanded), applies defaults and validates.
+// Parse decodes YAML, expands environment variables, applies defaults and validates.
 func Parse(b []byte) (*Config, error) {
 	var c Config
-	dec := yaml.NewDecoder(strings.NewReader(string(b)))
-	dec.KnownFields(true)
-	if err := dec.Decode(&c); err != nil && !errors.Is(err, io.EOF) { // an empty file means all defaults
+	var doc yaml.Node
+	if err := yaml.NewDecoder(strings.NewReader(string(b))).Decode(&doc); err != nil && !errors.Is(err, io.EOF) {
 		return nil, err
+	}
+	if doc.Kind != 0 { // an empty file means all defaults
+		// Expanding the parsed document rather than the raw text keeps a value containing
+		// "#", ": " or quotes a single literal string instead of changing the YAML structure.
+		expandNode(&doc)
+		// yaml.Node.Decode has no KnownFields option, so unknown keys are checked separately.
+		if err := checkKnownFields(&doc, reflect.TypeOf(c)); err != nil {
+			return nil, err
+		}
+		if err := doc.Decode(&c); err != nil {
+			return nil, err
+		}
 	}
 	c.applyDefaults()
 	if err := c.validate(); err != nil {
 		return nil, err
 	}
 	return &c, nil
+}
+
+func expandNode(n *yaml.Node) {
+	if n.Kind == yaml.ScalarNode && envRE.MatchString(n.Value) {
+		n.Value = expandEnv(n.Value)
+		quoted := yaml.SingleQuotedStyle | yaml.DoubleQuotedStyle | yaml.LiteralStyle | yaml.FoldedStyle | yaml.TaggedStyle
+		if n.Style&quoted == 0 {
+			n.Tag = "" // re-resolve, so a plain ${PORT:-587} still decodes into an int
+		}
+	}
+	for _, child := range n.Content {
+		expandNode(child)
+	}
+}
+
+var unmarshalerType = reflect.TypeOf((*yaml.Unmarshaler)(nil)).Elem()
+
+// checkKnownFields rejects mapping keys that match no yaml field of the target struct.
+func checkKnownFields(n *yaml.Node, t reflect.Type) error {
+	for t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	if reflect.PointerTo(t).Implements(unmarshalerType) {
+		return nil
+	}
+	switch {
+	case n.Kind == yaml.DocumentNode:
+		for _, child := range n.Content {
+			if err := checkKnownFields(child, t); err != nil {
+				return err
+			}
+		}
+	case n.Kind == yaml.SequenceNode && (t.Kind() == reflect.Slice || t.Kind() == reflect.Array):
+		for _, child := range n.Content {
+			if err := checkKnownFields(child, t.Elem()); err != nil {
+				return err
+			}
+		}
+	case n.Kind == yaml.MappingNode && t.Kind() == reflect.Map:
+		for i := 1; i < len(n.Content); i += 2 {
+			if err := checkKnownFields(n.Content[i], t.Elem()); err != nil {
+				return err
+			}
+		}
+	case n.Kind == yaml.MappingNode && t.Kind() == reflect.Struct:
+		fields := map[string]reflect.Type{}
+		for i := 0; i < t.NumField(); i++ {
+			f := t.Field(i)
+			name, _, _ := strings.Cut(f.Tag.Get("yaml"), ",")
+			if !f.IsExported() || name == "-" {
+				continue
+			}
+			if name == "" {
+				name = strings.ToLower(f.Name)
+			}
+			fields[name] = f.Type
+		}
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			key := n.Content[i]
+			ft, ok := fields[key.Value]
+			if !ok {
+				return fmt.Errorf("line %d: field %s not found in type config.%s", key.Line, key.Value, t.Name())
+			}
+			if err := checkKnownFields(n.Content[i+1], ft); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func boolPtr(v bool) *bool { return &v }
