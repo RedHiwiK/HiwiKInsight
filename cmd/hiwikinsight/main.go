@@ -15,6 +15,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strings"
 	"syscall"
 
@@ -28,6 +29,13 @@ import (
 
 // version is set at build time: -ldflags "-X main.version=v1.2.3"
 var version = "dev"
+
+func init() {
+	// Without ldflags (go install module@version), fall back to the module version Go records.
+	if info, ok := debug.ReadBuildInfo(); ok && version == "dev" && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		version = info.Main.Version
+	}
+}
 
 const usage = `HiwiKInsight: self-hosted analytics and App Store revenue for indie apps.
 

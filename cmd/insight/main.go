@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"text/tabwriter"
@@ -33,6 +34,13 @@ import (
 
 // version is overridden at build time with -ldflags "-X main.version=v1.2.3".
 var version = "dev"
+
+func init() {
+	// Without ldflags (go install module@version), fall back to the module version Go records.
+	if info, ok := debug.ReadBuildInfo(); ok && version == "dev" && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		version = info.Main.Version
+	}
+}
 
 const defaultEndpoint = "http://localhost:8080"
 
