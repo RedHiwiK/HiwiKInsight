@@ -1,10 +1,27 @@
-# HiwiKInsight
+<p align="center">
+  <img src=".github/logo.svg" width="128" height="128" alt="HiwiKInsight logo">
+</p>
 
-English | [简体中文](README.zh-CN.md)
+<h1 align="center">HiwiKInsight</h1>
 
-Self-hosted product analytics and App Store revenue for indie iOS and macOS developers, built to be queried by AI agents as well as people.
+<p align="center"><strong>Self-hosted product analytics and App Store revenue for indie iOS developers, built to be queried by AI agents as well as people.</strong></p>
+
+<p align="center">
+  <a href="https://github.com/RedHiwiK/HiwiKInsight/actions/workflows/ci.yml"><img src="https://github.com/RedHiwiK/HiwiKInsight/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white" alt="Go 1.26">
+  <img src="https://img.shields.io/badge/iOS-17%2B-000000?logo=apple&logoColor=white" alt="iOS 17+">
+  <img src="https://img.shields.io/badge/MCP-ready-6E56CF" alt="MCP ready">
+  <img src="https://img.shields.io/badge/third--party%20analytics-none-0FB5AE" alt="third-party analytics: none">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2EA44F" alt="License MIT"></a>
+</p>
+
+<p align="center">
+  <a href="#try-it-in-60-seconds">Try the demo</a> · <a href="docs/getting-started.md">Getting started</a> · <a href="docs/ai-integration.md">AI integration</a> · <a href="https://github.com/RedHiwiK/hiwikinsight-ios">iOS SDK</a> · <a href="README.zh-CN.md">简体中文</a>
+</p>
 
 HiwiKInsight is one Go binary with an embedded SQLite database (pure Go, no cgo). It receives anonymous usage events from the [HiwiKInsightKit](https://github.com/RedHiwiK/hiwikinsight-ios) Swift SDK, verifies App Store Server Notifications V2 in real time (and links each purchase to the paywall that drove it), syncs App Store Connect sales and analytics reports, and serves a web dashboard, email reports, alerts, and a read-only query layer that Claude, Cursor or any MCP client can use directly. No third-party analytics service ever sees your users' data.
+
+![HiwiKInsight portfolio dashboard](docs/images/portfolio.png)
 
 ## Try it in 60 seconds
 
@@ -34,6 +51,14 @@ Without Docker (Go 1.26+, Node 22, pnpm 10): `make demo`.
 - **Email reports and alerts.** Daily and weekly reports; alerts for failed purchases, payment errors, new or spiking errors, stale App Store Connect reports and apps that stop sending events.
 - **AI-native query layer.** A `describe` endpoint that documents tables, views, conventions, event catalogs and metrics; metric, SQL and user endpoints; the `insight` CLI; a built-in MCP server (`insight mcp`); and a Claude Code skill. All of it is read-only.
 - **Easy to operate.** One static binary or one container, one YAML file, one SQLite file to back up.
+
+## Screenshots
+
+From the demo (`make demo`): three fictional apps with 90 days of generated data.
+
+| Overview | Retention | Revenue |
+|---|---|---|
+| <img src="docs/images/overview.png" alt="Overview"> | <img src="docs/images/retention.png" alt="Retention"> | <img src="docs/images/revenue.png" alt="Revenue"> |
 
 ## Architecture
 
@@ -68,7 +93,7 @@ You need a server with a public HTTPS host name (for example `insight.example.co
 
 ```bash
 git clone https://github.com/RedHiwiK/HiwiKInsight.git && cd HiwiKInsight
-mkdir -p config/catalogs
+mkdir -p config && cp -r examples/catalogs config/    # sample event catalogs; replace with your own
 cp examples/config.example.yaml config/config.yaml    # edit apps, timezone, currency, users
 cp deploy/.env.example .env                           # set DOMAIN and the secrets
 docker run --rm -it ghcr.io/redhiwik/hiwikinsight:latest hash-password

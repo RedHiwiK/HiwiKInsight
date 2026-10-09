@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router'
 import clsx from 'clsx'
 import {
-  Activity, Boxes, Calendar, ChartNoAxesColumn, ChartPie, LayoutDashboard, Menu, Radar, Repeat,
+  Activity, Boxes, Calendar, ChartPie, LayoutDashboard, Menu, Radar, Repeat,
   Settings, Smartphone, Store, TriangleAlert, Users, Wallet, X,
 } from 'lucide-react'
 import { envOptions, rangeOptions, useFilters, useMeta, type Env } from '../data'
@@ -30,9 +30,7 @@ export const navItems = () => [
 export function Logo({ compact }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-[8px] bg-primary text-on-primary">
-        <ChartNoAxesColumn size={16} strokeWidth={2.25} />
-      </span>
+      <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" className="size-7 shrink-0 rounded-[8px]" />
       {!compact && <span className="text-[15px] leading-5 font-[650] tracking-tight text-text">HiwiKInsight</span>}
     </div>
   )

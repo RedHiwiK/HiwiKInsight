@@ -40,7 +40,7 @@ HiwiKInsight/
 Steps:
 
 ```bash
-mkdir -p config/catalogs
+mkdir -p config && cp -r examples/catalogs config/
 cp examples/config.example.yaml config/config.yaml
 cp deploy/.env.example .env
 openssl rand -hex 32                                                    # query token for .env

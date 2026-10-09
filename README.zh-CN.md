@@ -1,10 +1,27 @@
-# HiwiKInsight
+<p align="center">
+  <img src=".github/logo.svg" width="128" height="128" alt="HiwiKInsight logo">
+</p>
 
-[English](README.md) | 简体中文
+<h1 align="center">HiwiKInsight</h1>
 
-面向独立 iOS / macOS 开发者的自托管产品分析与 App Store 收入服务，既给人看，也能让 AI Agent 直接查询。
+<p align="center"><strong>面向独立 iOS 开发者的自托管产品分析与 App Store 收入服务，既给人看，也能让 AI Agent 直接查询。</strong></p>
+
+<p align="center">
+  <a href="https://github.com/RedHiwiK/HiwiKInsight/actions/workflows/ci.yml"><img src="https://github.com/RedHiwiK/HiwiKInsight/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white" alt="Go 1.26">
+  <img src="https://img.shields.io/badge/iOS-17%2B-000000?logo=apple&logoColor=white" alt="iOS 17+">
+  <img src="https://img.shields.io/badge/MCP-ready-6E56CF" alt="MCP ready">
+  <img src="https://img.shields.io/badge/third--party%20analytics-none-0FB5AE" alt="third-party analytics: none">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2EA44F" alt="License MIT"></a>
+</p>
+
+<p align="center">
+  <a href="#60-秒体验">60 秒体验</a> · <a href="docs/getting-started.md">快速上手</a> · <a href="docs/ai-integration.md">AI 接入</a> · <a href="https://github.com/RedHiwiK/hiwikinsight-ios">iOS SDK</a> · <a href="README.md">English</a>
+</p>
 
 HiwiKInsight 是一个 Go 单二进制，内嵌 SQLite（纯 Go 实现，无 cgo）。它接收 [HiwiKInsightKit](https://github.com/RedHiwiK/hiwikinsight-ios) Swift SDK 上报的匿名事件，实时验证 App Store Server Notifications V2（并把每笔购买关联到促成它的付费墙），同步 App Store Connect 销售与分析报表，并提供 Web 看板、邮件报告、告警，以及一套只读查询层，Claude、Cursor 或任何 MCP 客户端都能直接使用。用户数据不经过任何第三方分析服务。
+
+![HiwiKInsight 经营总览](docs/images/portfolio.png)
 
 ## 60 秒体验
 
@@ -34,6 +51,14 @@ curl -s -H "Authorization: Bearer demo-token" "http://localhost:8080/v1/query/me
 - **邮件报告与告警**：日报、周报；购买失败、付费相关错误、新错误或突增错误、App Store Connect 报表停更、App 停止上报等告警。
 - **面向 AI 的查询层**：`describe` 语义层（表、视图、口径、事件字典、指标）；指标、SQL、单用户接口；`insight` CLI；内置 MCP 服务（`insight mcp`）；Claude Code Skill。全部只读。
 - **运维简单**：一个静态二进制或一个容器，一个 YAML 配置，一个需要备份的 SQLite 文件。
+
+## 截图
+
+截图来自 demo（`make demo`）：三个虚构 App、90 天生成数据。界面支持中文，可在设置里切换。
+
+| 概览 | 留存 | 付费 |
+|---|---|---|
+| <img src="docs/images/overview.png" alt="概览"> | <img src="docs/images/retention.png" alt="留存"> | <img src="docs/images/revenue.png" alt="付费"> |
 
 ## 架构
 
@@ -68,7 +93,7 @@ curl -s -H "Authorization: Bearer demo-token" "http://localhost:8080/v1/query/me
 
 ```bash
 git clone https://github.com/RedHiwiK/HiwiKInsight.git && cd HiwiKInsight
-mkdir -p config/catalogs
+mkdir -p config && cp -r examples/catalogs config/    # 示例事件字典，换成你自己的
 cp examples/config.example.yaml config/config.yaml    # 修改 apps、timezone、currency、users
 cp deploy/.env.example .env                           # 填写 DOMAIN 和各项密钥
 docker run --rm -it ghcr.io/redhiwik/hiwikinsight:latest hash-password

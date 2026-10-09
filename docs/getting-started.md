@@ -42,7 +42,7 @@ Steps:
 
 ```bash
 git clone https://github.com/RedHiwiK/HiwiKInsight.git && cd HiwiKInsight
-mkdir -p config/catalogs
+mkdir -p config && cp -r examples/catalogs config/
 cp examples/config.example.yaml config/config.yaml
 cp deploy/.env.example .env
 ```
