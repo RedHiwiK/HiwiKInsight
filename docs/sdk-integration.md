@@ -1,6 +1,6 @@
 # SDK integration
 
-[HiwiKInsightKit](https://github.com/RedHiwiK/HiwiKInsightKit) is the Swift SDK that sends anonymous events to your HiwiKInsight server. It has no dependencies, targets iOS 17+ (Swift 6, Xcode 16+; the package also builds on macOS 14+), and stores events on disk until they are delivered. The wire format is specified in the SDK's [PROTOCOL.md](https://github.com/RedHiwiK/HiwiKInsightKit/blob/main/PROTOCOL.md), which is the only contract between SDK and server.
+[HiwiKInsightKit](https://github.com/RedHiwiK/hiwikinsight-ios) is the Swift SDK that sends anonymous events to your HiwiKInsight server. It has no dependencies, targets iOS 17+ (Swift 6, Xcode 16+; the package also builds on macOS 14+), and stores events on disk until they are delivered. The wire format is specified in the SDK's [PROTOCOL.md](https://github.com/RedHiwiK/hiwikinsight-ios/blob/main/PROTOCOL.md), which is the only contract between SDK and server.
 
 App Store revenue (server notifications and App Store Connect reports) does not need the SDK; the SDK adds usage analytics and purchase attribution.
 
@@ -29,11 +29,11 @@ Swift Package Manager:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/RedHiwiK/HiwiKInsightKit", from: "0.2.0"),
+    .package(url: "https://github.com/RedHiwiK/hiwikinsight-ios", from: "0.2.0"),
 ]
 ```
 
-or in Xcode: **File > Add Package Dependencies...** with `https://github.com/RedHiwiK/HiwiKInsightKit`.
+or in Xcode: **File > Add Package Dependencies...** with `https://github.com/RedHiwiK/hiwikinsight-ios`.
 
 ## 3. Start
 

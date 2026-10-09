@@ -69,7 +69,7 @@ Go code builds without the dashboard; `/dashboard/` then answers 503 "Dashboard 
 - **Colors** in the dashboard only come from CSS variables in `web/src/styles/tokens.css` (light and dark). Never hard-code a color in a component. Charts read tokens through `usePalette()`; a token used by a chart must also be listed in `tokenNames` in `web/src/theme.tsx`.
 - **Migrations are append-only.** Add a new string to the end of `migrations` in `internal/store/migrations.go`. Never edit or reorder an existing one; deployed databases track progress with `PRAGMA user_version`. Views must use `json_extract`, not `->>`, so older `sqlite3` CLIs can still open the database.
 - **The query API stays read-only.** It runs on `Store.ReadOnly()` (`mode=ro`, `query_only`), and `query.ValidateSQL` allows one `SELECT`/`WITH`. Do not add write endpoints under `/v1/query/`.
-- **The event wire protocol stays backward compatible** with HiwiKInsightKit ([PROTOCOL.md](https://github.com/RedHiwiK/HiwiKInsightKit/blob/main/PROTOCOL.md)). Schema 1 must keep working; change PROTOCOL.md first.
+- **The event wire protocol stays backward compatible** with HiwiKInsightKit ([PROTOCOL.md](https://github.com/RedHiwiK/hiwikinsight-ios/blob/main/PROTOCOL.md)). Schema 1 must keep working; change PROTOCOL.md first.
 - **Privacy.** Ingestion never reads client IPs. Do not add fields that identify a person.
 - **Metric definitions are a contract.** Changing what a metric counts changes the `Definition` string too; AI agents and users rely on it.
 - **Commits**: Conventional Commits in English (`feat(metrics): ...`, `fix(ingest): ...`).

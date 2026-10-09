@@ -7,7 +7,7 @@ Thanks for your interest in HiwiKInsight. Bug reports, documentation fixes and p
 - For bugs, open an issue with the version (`hiwikinsight version`), what you did, what you expected and what happened. Include logs with secrets removed.
 - For new features, open an issue first to agree on the approach. HiwiKInsight aims to stay small: one binary, one SQLite file, one config file, few dependencies.
 - Security issues: do not open a public issue; see [SECURITY.md](SECURITY.md).
-- Changes to the event wire protocol must go to [HiwiKInsightKit's PROTOCOL.md](https://github.com/RedHiwiK/HiwiKInsightKit/blob/main/PROTOCOL.md) first and stay backward compatible.
+- Changes to the event wire protocol must go to [HiwiKInsightKit's PROTOCOL.md](https://github.com/RedHiwiK/hiwikinsight-ios/blob/main/PROTOCOL.md) first and stay backward compatible.
 
 ## Development setup
 

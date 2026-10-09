@@ -4,7 +4,7 @@
 
 面向独立 iOS / macOS 开发者的自托管产品分析与 App Store 收入服务，既给人看，也能让 AI Agent 直接查询。
 
-HiwiKInsight 是一个 Go 单二进制，内嵌 SQLite（纯 Go 实现，无 cgo）。它接收 [HiwiKInsightKit](https://github.com/RedHiwiK/HiwiKInsightKit) Swift SDK 上报的匿名事件，实时验证 App Store Server Notifications V2（并把每笔购买关联到促成它的付费墙），同步 App Store Connect 销售与分析报表，并提供 Web 看板、邮件报告、告警，以及一套只读查询层，Claude、Cursor 或任何 MCP 客户端都能直接使用。用户数据不经过任何第三方分析服务。
+HiwiKInsight 是一个 Go 单二进制，内嵌 SQLite（纯 Go 实现，无 cgo）。它接收 [HiwiKInsightKit](https://github.com/RedHiwiK/hiwikinsight-ios) Swift SDK 上报的匿名事件，实时验证 App Store Server Notifications V2（并把每笔购买关联到促成它的付费墙），同步 App Store Connect 销售与分析报表，并提供 Web 看板、邮件报告、告警，以及一套只读查询层，Claude、Cursor 或任何 MCP 客户端都能直接使用。用户数据不经过任何第三方分析服务。
 
 ## 60 秒体验
 
@@ -86,7 +86,7 @@ docker compose up -d
 
 ## 接入 App
 
-用 Swift Package Manager 添加 SDK（`https://github.com/RedHiwiK/HiwiKInsightKit`），然后：
+用 Swift Package Manager 添加 SDK（`https://github.com/RedHiwiK/hiwikinsight-ios`），然后：
 
 ```swift
 import HiwiKInsightKit

@@ -4,7 +4,7 @@ English | [简体中文](README.zh-CN.md)
 
 Self-hosted product analytics and App Store revenue for indie iOS and macOS developers, built to be queried by AI agents as well as people.
 
-HiwiKInsight is one Go binary with an embedded SQLite database (pure Go, no cgo). It receives anonymous usage events from the [HiwiKInsightKit](https://github.com/RedHiwiK/HiwiKInsightKit) Swift SDK, verifies App Store Server Notifications V2 in real time (and links each purchase to the paywall that drove it), syncs App Store Connect sales and analytics reports, and serves a web dashboard, email reports, alerts, and a read-only query layer that Claude, Cursor or any MCP client can use directly. No third-party analytics service ever sees your users' data.
+HiwiKInsight is one Go binary with an embedded SQLite database (pure Go, no cgo). It receives anonymous usage events from the [HiwiKInsightKit](https://github.com/RedHiwiK/hiwikinsight-ios) Swift SDK, verifies App Store Server Notifications V2 in real time (and links each purchase to the paywall that drove it), syncs App Store Connect sales and analytics reports, and serves a web dashboard, email reports, alerts, and a read-only query layer that Claude, Cursor or any MCP client can use directly. No third-party analytics service ever sees your users' data.
 
 ## Try it in 60 seconds
 
@@ -86,7 +86,7 @@ Full guide, backups and upgrades: [docs/deployment.md](docs/deployment.md). A te
 
 ## Integrate your app
 
-Add the SDK with Swift Package Manager (`https://github.com/RedHiwiK/HiwiKInsightKit`), then:
+Add the SDK with Swift Package Manager (`https://github.com/RedHiwiK/hiwikinsight-ios`), then:
 
 ```swift
 import HiwiKInsightKit
