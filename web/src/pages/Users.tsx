@@ -24,7 +24,6 @@ export function UsersPage() {
   const navigate = useNavigate()
   const [sp, setSp] = useSearchParams()
   const tier = sp.get('tier') ?? 'all'
-  const paid = sp.get('paid') === '1'
   const pro = sp.get('pro') === '1'
   const fresh = sp.get('new') === '1'
   const sort = sp.get('sort') ?? 'last_seen'
@@ -38,7 +37,7 @@ export function UsersPage() {
     })
 
   const res = useMetric('users', {
-    tier: tier === 'all' ? undefined : tier, paid: paid ? '1' : undefined, pro: pro ? '1' : undefined, new: fresh ? '1' : undefined,
+    tier: tier === 'all' ? undefined : tier, pro: pro ? '1' : undefined, new: fresh ? '1' : undefined,
     sort, offset: page * pageSize, limit: pageSize,
   })
   const summary = rows(res.data, 'summary')[0]
@@ -62,7 +61,6 @@ export function UsersPage() {
         <span className="flex items-center gap-1">
           <Badge tone={tierMeta(String(r.tier))?.tone}>{tierMeta(String(r.tier))?.label}</Badge>
           {num(r.is_pro) === 1 && <Badge tone="primary" title={t('当前会员：App 最近一次上报的状态', 'Current member, as last reported by the app')}>Pro</Badge>}
-          {num(r.is_paid) === 1 && <Badge tone="success">{t('付费', 'Paid')}</Badge>}
           {num(r.is_new) === 1 && <Badge tone="c2">{t('新', 'New')}</Badge>}
         </span>
       ),
@@ -85,7 +83,6 @@ export function UsersPage() {
           <Segmented value={tier} options={tierOpts} onChange={(v) => setParam({ tier: v === 'all' ? null : v })} ariaLabel={t('用户分层', 'User tier')} />
         </div>
         <Toggle checked={pro} onChange={(v) => setParam({ pro: v ? '1' : null })} label={t('只看 Pro', 'Pro only')} />
-        <Toggle checked={paid} onChange={(v) => setParam({ paid: v ? '1' : null })} label={t('只看付费', 'Paid only')} />
         <Toggle checked={fresh} onChange={(v) => setParam({ new: v ? '1' : null })} label={t('只看真新用户', 'New users only')} />
       </div>
 

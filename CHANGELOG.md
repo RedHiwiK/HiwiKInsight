@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `v_user_summary.is_pro`: current membership from `is_pro` in the latest `user.snapshot`, or an App Store purchase or trial start confirmed after it and not since expired, refunded or revoked. Unlike `is_paid`, it includes members who bought before the SDK was integrated or restored a purchase. The `users` metric gains a `pro=1` filter, an `is_pro` column and `pro_users` in its summary; the dashboard shows a Pro badge and a "Pro only" filter. Adds database migration v10 (recreates the view, no data change).
+- `v_user_summary.is_pro`: current membership from `is_pro` in the latest `user.snapshot`, or an App Store purchase or trial start confirmed after it and not since expired, refunded or revoked. Unlike `is_paid`, it includes members who bought before the SDK was integrated or restored a purchase. The `users` metric gains a `pro=1` filter, an `is_pro` column and `pro_users` in its summary; the dashboard shows a Pro badge and a "Pro only" filter, which replace the Paid badge and the "Paid only" filter (`is_paid` and `paid=1` remain in the query API for purchase attribution). Adds database migration v10 (recreates the view, no data change).
 
 ## [v1.0.0] — first open-source release
 
