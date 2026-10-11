@@ -433,7 +433,7 @@ Self-hosted anonymous app analytics plus App Store transactions, stored in SQLit
 ## Views (prefer them when writing SQL)
 
 - **v_user_days**: app, env, day, install_id, sessions, duration_s, events
-- **v_user_summary**: one row per user: first_seen_day, acquired_day, is_new, last_seen_day, first_version, last_version, device, device_name, os_version, region, storefront, language, active_days, sessions, duration_s, is_paid
+- **v_user_summary**: one row per user: first_seen_day, acquired_day, is_new, last_seen_day, first_version, last_version, device, device_name, os_version, region, storefront, language, active_days, sessions, duration_s, is_paid (a paid App Store sale attributed to this install through appAccountToken), is_pro (current member: is_pro = "true" in the latest user.snapshot, or an App Store purchase or trial start after it that has not since expired or been refunded; also covers members who bought before the SDK was integrated)
 - **v_sessions**: one row per session: install_id, session_id, started_at, day, source (how the app was opened), duration_s, screen_views, events
 - **v_screen_usage**: screen views and exits: day, install_id, session_id, ts, kind (viewed / left), screen, module, duration_s (left only)
 

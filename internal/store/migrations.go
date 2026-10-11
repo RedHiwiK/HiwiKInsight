@@ -325,6 +325,54 @@ SELECT
 	) AS is_paid
 FROM installs i LEFT JOIN device_models m ON m.identifier = i.device;
 `,
+	// v10: is_pro is the user's current membership as last reported by the app: is_pro in the latest
+	// user.snapshot, or a purchase or trial start confirmed by the App Store after that snapshot and not
+	// followed by an expiry, refund or revocation of the same appAccountToken (renewals keep the token, and
+	// a lapsed user may never open the app again to send a new snapshot). Unlike is_paid it covers members
+	// who bought before the SDK was integrated or restored a purchase.
+	// The snapshot lookups walk idx_events_install backwards and stop at the first match.
+	`
+DROP VIEW v_user_summary;
+CREATE VIEW v_user_summary AS
+SELECT
+	i.app, i.env, i.install_id,
+	local_date(i.first_seen)  AS first_seen_day,
+	local_date(i.acquired_at) AS acquired_day,
+	local_date(i.first_seen) = local_date(i.acquired_at) AS is_new,
+	local_date(i.last_seen)   AS last_seen_day,
+	i.first_version, i.last_version,
+	i.device, COALESCE(m.name, i.device) AS device_name,
+	i.os_version, i.region, i.storefront, i.language,
+	(SELECT COUNT(*) FROM daily_active d WHERE d.app = i.app AND d.install_id = i.install_id) AS active_days,
+	(SELECT COALESCE(SUM(sessions), 0) FROM daily_active d WHERE d.app = i.app AND d.install_id = i.install_id) AS sessions,
+	(SELECT COALESCE(SUM(duration_s), 0) FROM daily_active d WHERE d.app = i.app AND d.install_id = i.install_id) AS duration_s,
+	EXISTS (
+		SELECT 1 FROM purchase_attempts p JOIN appstore_events a ON a.app_account_token = p.token
+		WHERE p.app = i.app AND p.install_id = i.install_id AND a.revenue_sign = 1 AND a.price_milli > 0
+	) AS is_paid,
+	(
+		COALESCE((
+			SELECT json_extract(e.params, '$.is_pro') IN ('true', '1') FROM events e
+			WHERE e.app = i.app AND e.install_id = i.install_id AND e.name = 'user.snapshot'
+			ORDER BY e.ts DESC LIMIT 1
+		), 0)
+		OR EXISTS (
+			SELECT 1 FROM purchase_attempts p JOIN appstore_events a ON a.app_account_token = p.token
+			WHERE p.app = i.app AND p.install_id = i.install_id AND a.revenue_sign = 1
+				AND a.signed_at > COALESCE((
+					SELECT e.ts FROM events e
+					WHERE e.app = i.app AND e.install_id = i.install_id AND e.name = 'user.snapshot'
+					ORDER BY e.ts DESC LIMIT 1
+				), 0)
+				AND NOT EXISTS (
+					SELECT 1 FROM appstore_events x
+					WHERE x.app_account_token = p.token AND x.signed_at > a.signed_at
+						AND (x.revenue_sign = -1 OR x.notification_type IN ('EXPIRED', 'GRACE_PERIOD_EXPIRED', 'REVOKE'))
+				)
+		)
+	) AS is_pro
+FROM installs i LEFT JOIN device_models m ON m.identifier = i.device;
+`,
 }
 
 func migrate(db *sql.DB) error {
