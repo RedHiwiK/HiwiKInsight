@@ -122,6 +122,8 @@ This sends an `error` event with `id`, `category` and `message`. Use a stable `i
 
 The closure passed to `start` returns a dictionary sent as `user.snapshot` once per local calendar day on the first session. Use it for state rather than actions: number of items (bucketed), subscription state, settings toggles.
 
+Report the membership state as `is_pro` (`"true"` or `"false"`). The server reads it from the latest snapshot for `v_user_summary.is_pro`, the Pro badge and the "Pro only" filter on the Users page, so members who bought before you integrated the SDK or restored a purchase still show up as Pro. Without it, only purchases attributed through `appAccountToken` are known.
+
 ## 9. Paywall funnel and purchase attribution
 
 The `funnel` and `revenue` metrics and the transaction emails rely on these events. `purchase.started` comes from the SDK; the others are your own `signal` calls with the same `context` value:

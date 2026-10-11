@@ -37,6 +37,7 @@ If a command fails with HTTP 401 or "cannot reach", tell the user how to set the
 - **Environment**: default to `env = 'production'`. `sandbox` (TestFlight) and `xcode` (development) are excluded unless the user asks.
 - **Users** are anonymous `install_id`s. Reinstalling the app produces a new id, so "users" means installs.
 - **Truly new user** = first seen on the same day as the App Store first download (`v_user_summary.is_new = 1`). Existing users who upgrade into a tracked version also emit install events but are not new; never count them as acquisition.
+- **Paying vs. Pro**: `is_paid = 1` means a paid sale attributed to the install through `appAccountToken` (use it for paywall attribution); `is_pro = 1` means a current member as last reported by the app, including members who bought before tracking began. Say which one you mean.
 - Data starts when tracking was added to each app; describe shows the volume per app. Do not estimate periods with no data.
 - **Small samples**: always give absolute counts next to ratios and do not draw conclusions from single-digit samples.
 - **Only state what the data supports.** If data is missing, an event is unregistered or a definition is unclear, say so instead of filling the gap.

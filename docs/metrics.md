@@ -158,7 +158,7 @@ Extra parameters: none.
 
 ## users
 
-> Active users in the range; tiers are based on active days in the 28 days up to `to` (heavy >= 15, medium 5-14, light 2-4, once 1, dormant 0); parameters tier / paid=1 / new=1 / sort / offset / limit
+> Active users in the range; tiers are based on active days in the 28 days up to `to` (heavy >= 15, medium 5-14, light 2-4, once 1, dormant 0); parameters tier / paid=1 (is_paid) / pro=1 (is_pro, current member as last reported by the app) / new=1 / sort / offset / limit
 
 Extra parameters:
 
@@ -166,6 +166,7 @@ Extra parameters:
 |---|---|
 | `tier` | `heavy`, `medium`, `light`, `once`, `dormant` (or `all`) |
 | `paid` | `1`: only users with `is_paid = 1` (a paid App Store transaction, `revenue_sign = +1` and price > 0, attributed to them through `appAccountToken`; free-trial starts do not count) |
+| `pro` | `1`: only users with `is_pro = 1`: current members as last reported by the app (`is_pro` = `"true"` or `"1"` in the latest `user.snapshot`), or users with an App Store purchase or trial start confirmed after that snapshot and not since expired, refunded or revoked. Unlike `paid`, this includes members who bought before the SDK was integrated or restored a purchase; it is only as current as the latest snapshot |
 | `new` | `1`: only truly new users |
 | `sort` | `last_seen` (default), `first_seen`, `active_days`, `sessions`, `duration` |
 | `offset` | Paging offset |
@@ -173,9 +174,9 @@ Extra parameters:
 
 | Table | Columns |
 |---|---|
-| `summary` | `total` (after filters), `offset`, `limit`, `all_users`, `paid_users`, `new_users` |
+| `summary` | `total` (after filters), `offset`, `limit`, `all_users`, `paid_users`, `new_users`, `pro_users` |
 | `tiers` | `tier`, `users` (before filters) |
-| `users` | `install_id`, `tier`, `days_28`, `first_seen_day`, `acquired_day`, `last_seen_day`, `active_days`, `sessions`, `duration_s`, `device_name`, `os_version`, `last_version`, `region`, `storefront`, `is_new`, `is_paid` |
+| `users` | `install_id`, `tier`, `days_28`, `first_seen_day`, `acquired_day`, `last_seen_day`, `active_days`, `sessions`, `duration_s`, `device_name`, `os_version`, `last_version`, `region`, `storefront`, `is_new`, `is_paid`, `is_pro` |
 
 ## event_trend
 

@@ -57,6 +57,7 @@ export function UserDetailPage() {
         {summary && (
           <span className="flex items-center gap-1">
             <Badge tone={tierMeta(tier)?.tone}>{tierMeta(tier)?.label}</Badge>
+            {num(summary.is_pro) === 1 && <Badge tone="primary" title={t('当前会员：App 最近一次上报的状态', 'Current member, as last reported by the app')}>Pro</Badge>}
             {num(summary.is_paid) === 1 && <Badge tone="success">{t('已付费', 'Paid')}</Badge>}
             {num(summary.is_new) === 1 && <Badge tone="c2">{t('真新用户', 'New user')}</Badge>}
           </span>

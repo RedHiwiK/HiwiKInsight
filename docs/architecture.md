@@ -81,7 +81,7 @@ cmd/insight                 CLI and MCP server; talks to /v1/query/* over HTTP o
 | View | Purpose |
 |---|---|
 | `v_user_days` | `daily_active` under an analysis-friendly name |
-| `v_user_summary` | One row per user: first seen, acquired and last seen days, `is_new`, versions, device name, OS, region, storefront, language, active days, sessions, duration, `is_paid` |
+| `v_user_summary` | One row per user: first seen, acquired and last seen days, `is_new`, versions, device name, OS, region, storefront, language, active days, sessions, duration, `is_paid` (attributed paid sale), `is_pro` (current member, from the latest `user.snapshot`) |
 | `v_sessions` | One row per session: start, day, `source`, `duration_s`, screen views, events |
 | `v_screen_usage` | Screen views and exits: `kind` (`viewed`/`left`), `screen`, `module`, `duration_s` |
 

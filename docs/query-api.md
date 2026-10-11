@@ -171,7 +171,7 @@ Returns the metric shape with `metric: "user"` and three tables:
 
 | Table | Columns |
 |---|---|
-| `summary` | The `v_user_summary` row: app, env, install_id, first_seen_day, acquired_day, is_new, last_seen_day, first_version, last_version, device, device_name, os_version, region, storefront, language, active_days, sessions, duration_s, is_paid |
+| `summary` | The `v_user_summary` row: app, env, install_id, first_seen_day, acquired_day, is_new, last_seen_day, first_version, last_version, device, device_name, os_version, region, storefront, language, active_days, sessions, duration_s, is_paid, is_pro |
 | `calendar` | day, env, sessions, duration_s, events (every active day, newest first) |
 | `events` | time_local, name, session (first 8 characters), params, app_version (newest first, up to `limit`) |
 

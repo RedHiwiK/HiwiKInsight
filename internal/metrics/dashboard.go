@@ -18,7 +18,7 @@ func init() {
 	defs = append(defs,
 		Def{"overview", "Overview KPIs for the current period and the preceding period of equal length: average DAU, active users in the range, truly new users, stickiness (average DAU / MAU as of `to`), sessions, daily sessions per user, median session duration, net revenue; plus a daily trend and user tiers", overview},
 		Def{"sessions_daily", "Daily sessions, active users, sessions per user, and the median / P90 foreground duration (seconds) of sessions that ended that day", sessionsDaily},
-		Def{"users", "Active users in the range; tiers are based on active days in the 28 days up to `to` (heavy >= 15, medium 5-14, light 2-4, once 1, dormant 0); parameters tier / paid=1 / new=1 / sort / offset / limit", users},
+		Def{"users", "Active users in the range; tiers are based on active days in the 28 days up to `to` (heavy >= 15, medium 5-14, light 2-4, once 1, dormant 0); parameters tier / paid=1 (is_paid) / pro=1 (is_pro, current member as last reported by the app) / new=1 / sort / offset / limit", users},
 		Def{"event_trend", "Count and users of any event by day / week / month, optionally grouped by one parameter (at most 8 groups, the rest as (other)); parameters event / group_by / granularity=day|week|month", eventTrend},
 		Def{"errors", "error events aggregated by id: count, affected users, versions involved, last occurrence and latest message; plus daily error counts", errorsMetric},
 	)
@@ -318,7 +318,7 @@ func users(ctx context.Context, db *sql.DB, p Params) ([]Table, error) {
 	}
 	all, err := queryTable(ctx, db, "users", `
 		SELECT s.install_id, s.first_seen_day, s.acquired_day, s.last_seen_day, s.active_days, s.sessions, s.duration_s,
-			s.device_name, s.os_version, s.last_version, s.region, s.storefront, s.is_new, s.is_paid
+			s.device_name, s.os_version, s.last_version, s.region, s.storefront, s.is_new, s.is_paid, s.is_pro
 		FROM v_user_summary s
 		WHERE s.app = ? AND s.env = ?
 			AND EXISTS (SELECT 1 FROM daily_active d WHERE d.app = s.app AND d.env = s.env AND d.install_id = s.install_id AND d.day BETWEEN ? AND ?)
@@ -327,15 +327,18 @@ func users(ctx context.Context, db *sql.DB, p Params) ([]Table, error) {
 		return nil, err
 	}
 	tierCount := map[string]int{}
-	paidCount, newCount := 0, 0
+	paidCount, newCount, proCount := 0, 0, 0
 	out := Table{Name: "users", Columns: append([]string{"install_id", "tier", "days_28"}, all.Columns[1:]...)}
 	for _, r := range all.Rows {
 		id := fmt.Sprint(r[0])
 		tier := Tier(d28[id])
 		tierCount[tier]++
-		paid, fresh := toInt(r[13]) == 1, toInt(r[12]) == 1
+		paid, fresh, pro := toInt(r[13]) == 1, toInt(r[12]) == 1, toInt(r[14]) == 1
 		if paid {
 			paidCount++
+		}
+		if pro {
+			proCount++
 		}
 		if fresh {
 			newCount++
@@ -347,6 +350,9 @@ func users(ctx context.Context, db *sql.DB, p Params) ([]Table, error) {
 			continue
 		}
 		if p.arg("new") == "1" && !fresh {
+			continue
+		}
+		if p.arg("pro") == "1" && !pro {
 			continue
 		}
 		out.Rows = append(out.Rows, append([]any{id, tier, d28[id]}, r[1:]...))
@@ -362,8 +368,8 @@ func users(ctx context.Context, db *sql.DB, p Params) ([]Table, error) {
 	if out.Rows == nil {
 		out.Rows = [][]any{}
 	}
-	summary := Table{Name: "summary", Columns: []string{"total", "offset", "limit", "all_users", "paid_users", "new_users"},
-		Rows: [][]any{{total, offset, limit, len(all.Rows), paidCount, newCount}}}
+	summary := Table{Name: "summary", Columns: []string{"total", "offset", "limit", "all_users", "paid_users", "new_users", "pro_users"},
+		Rows: [][]any{{total, offset, limit, len(all.Rows), paidCount, newCount, proCount}}}
 	tiers := Table{Name: "tiers", Columns: []string{"tier", "users"}}
 	for _, t := range tierOrder {
 		tiers.Rows = append(tiers.Rows, []any{t, tierCount[t]})
