@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v1.1.1] — 2026-10-12
+
 ### Added
 
 - Attribution for apps that pass their own stable `appAccountToken` (an account ID) on every purchase, with HiwiKInsightKit 0.3.0's `beginPurchase(product:context:appAccountToken:)`. `purchase_attempts` now keeps every attempt of a token (surrogate key `id`, deduplicated by token, install and time), and the new view `v_attribution` maps each notification to one attempt: the latest attempt with the same token in the same app started no later than 5 minutes after the purchase (for renewals, refunds and expiry: after the purchase that started them). The `funnel` and `revenue` metrics, reports, transaction emails, `is_paid` and `is_pro` all resolve through it. Tokens generated per purchase resolve exactly as before.
@@ -42,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Deployment assets: multi-arch container image on GHCR, Docker Compose with Caddy, systemd unit, nginx example, release archives for linux and darwin (amd64, arm64).
 - Documentation in `docs/`, `AGENTS.md` for AI coding agents, English and Chinese READMEs.
 
-[Unreleased]: https://github.com/RedHiwiK/HiwiKInsight/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/RedHiwiK/HiwiKInsight/compare/v1.1.1...HEAD
+[v1.1.1]: https://github.com/RedHiwiK/HiwiKInsight/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/RedHiwiK/HiwiKInsight/compare/v1.0.0...v1.1.0
 [v1.0.0]: https://github.com/RedHiwiK/HiwiKInsight/releases/tag/v1.0.0
