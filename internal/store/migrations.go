@@ -373,6 +373,119 @@ SELECT
 	) AS is_pro
 FROM installs i LEFT JOIN device_models m ON m.identifier = i.device;
 `,
+	// v11: an app may pass its own stable appAccountToken (an account ID) on every purchase, so one token
+	// can have many purchase attempts. purchase_attempts gets a surrogate key (retried batches are still
+	// deduplicated by token + install + time), appstore_events keeps the fields needed to pick the right
+	// attempt, and v_attribution is the single place that maps a notification to one attempt. Tokens
+	// generated per purchase have one attempt each and resolve exactly as before.
+	`
+ALTER TABLE appstore_events ADD COLUMN app TEXT NOT NULL DEFAULT '';
+ALTER TABLE appstore_events ADD COLUMN original_transaction_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE appstore_events ADD COLUMN transaction_reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE appstore_events ADD COLUMN purchase_at INTEGER;
+ALTER TABLE appstore_events ADD COLUMN original_purchase_at INTEGER;
+CREATE INDEX idx_appstore_events_original ON appstore_events (original_transaction_id, purchase_at)
+	WHERE original_transaction_id != '';
+
+DROP VIEW v_user_summary;
+CREATE TABLE purchase_attempts_v11 (
+	id          INTEGER PRIMARY KEY,
+	token       TEXT NOT NULL,
+	app         TEXT NOT NULL,
+	env         TEXT NOT NULL,
+	install_id  TEXT NOT NULL,
+	context     TEXT NOT NULL DEFAULT '',
+	product     TEXT NOT NULL DEFAULT '',
+	ts          INTEGER NOT NULL,
+	app_version TEXT, device TEXT, os_version TEXT,
+	UNIQUE (token, install_id, ts)
+);
+INSERT INTO purchase_attempts_v11 (token, app, env, install_id, context, product, ts, app_version, device, os_version)
+SELECT token, app, env, install_id, context, product, ts, app_version, device, os_version
+FROM purchase_attempts ORDER BY ts;
+DROP TABLE purchase_attempts;
+ALTER TABLE purchase_attempts_v11 RENAME TO purchase_attempts;
+CREATE INDEX idx_purchase_attempts_token_ts ON purchase_attempts (token, ts);
+CREATE INDEX idx_purchase_attempts_install ON purchase_attempts (app, install_id);
+
+-- One row per notification that carries an appAccountToken; attempt_id is NULL when nothing matches.
+-- The attempt is the latest one with the same token in the same app started no later than 5 minutes after
+-- the moment the user bought: the transaction's own purchase time for a user-initiated purchase
+-- (transactionReason PURCHASE); otherwise (renewals, refunds, expiry) the purchase time of the latest stored
+-- user-initiated transaction with the same originalTransactionId, or else the original purchase time.
+-- Resubscribing keeps the originalTransactionId but is a new PURCHASE, so it is credited to its own attempt.
+-- When nothing qualifies, the latest attempt before the transaction itself is used; rows stored before v11
+-- have no purchase times and match any attempt of the token, as before.
+CREATE VIEW v_attribution AS
+SELECT
+	a.notification_uuid,
+	COALESCE(
+		(
+			SELECT p.id FROM purchase_attempts p
+			WHERE p.token = a.app_account_token AND (a.app = '' OR p.app = a.app)
+				AND p.ts <= 300000 + CASE WHEN a.transaction_reason = 'PURCHASE' THEN a.purchase_at ELSE COALESCE((
+					SELECT s.purchase_at FROM appstore_events s
+					WHERE s.original_transaction_id = a.original_transaction_id AND a.original_transaction_id != ''
+						AND s.transaction_reason = 'PURCHASE' AND s.purchase_at <= a.purchase_at
+					ORDER BY s.purchase_at DESC LIMIT 1
+				), a.original_purchase_at) END
+			ORDER BY p.ts DESC, p.id DESC LIMIT 1
+		),
+		(
+			SELECT p.id FROM purchase_attempts p
+			WHERE p.token = a.app_account_token AND (a.app = '' OR p.app = a.app)
+				AND (a.purchase_at IS NULL OR p.ts <= a.purchase_at + 300000)
+			ORDER BY p.ts DESC, p.id DESC LIMIT 1
+		)
+	) AS attempt_id
+FROM appstore_events a
+WHERE a.app_account_token != '';
+
+CREATE VIEW v_user_summary AS
+SELECT
+	i.app, i.env, i.install_id,
+	local_date(i.first_seen)  AS first_seen_day,
+	local_date(i.acquired_at) AS acquired_day,
+	local_date(i.first_seen) = local_date(i.acquired_at) AS is_new,
+	local_date(i.last_seen)   AS last_seen_day,
+	i.first_version, i.last_version,
+	i.device, COALESCE(m.name, i.device) AS device_name,
+	i.os_version, i.region, i.storefront, i.language,
+	(SELECT COUNT(*) FROM daily_active d WHERE d.app = i.app AND d.install_id = i.install_id) AS active_days,
+	(SELECT COALESCE(SUM(sessions), 0) FROM daily_active d WHERE d.app = i.app AND d.install_id = i.install_id) AS sessions,
+	(SELECT COALESCE(SUM(duration_s), 0) FROM daily_active d WHERE d.app = i.app AND d.install_id = i.install_id) AS duration_s,
+	EXISTS (
+		SELECT 1 FROM purchase_attempts p
+		JOIN appstore_events a ON a.app_account_token = p.token
+		JOIN v_attribution v ON v.notification_uuid = a.notification_uuid AND v.attempt_id = p.id
+		WHERE p.app = i.app AND p.install_id = i.install_id AND a.revenue_sign = 1 AND a.price_milli > 0
+	) AS is_paid,
+	(
+		COALESCE((
+			SELECT json_extract(e.params, '$.is_pro') IN ('true', '1') FROM events e
+			WHERE e.app = i.app AND e.install_id = i.install_id AND e.name = 'user.snapshot'
+			ORDER BY e.ts DESC LIMIT 1
+		), 0)
+		OR EXISTS (
+			SELECT 1 FROM purchase_attempts p
+			JOIN appstore_events a ON a.app_account_token = p.token
+			JOIN v_attribution v ON v.notification_uuid = a.notification_uuid AND v.attempt_id = p.id
+			WHERE p.app = i.app AND p.install_id = i.install_id AND a.revenue_sign = 1
+				AND a.signed_at > COALESCE((
+					SELECT e.ts FROM events e
+					WHERE e.app = i.app AND e.install_id = i.install_id AND e.name = 'user.snapshot'
+					ORDER BY e.ts DESC LIMIT 1
+				), 0)
+				AND NOT EXISTS (
+					SELECT 1 FROM appstore_events x
+					JOIN v_attribution xv ON xv.notification_uuid = x.notification_uuid AND xv.attempt_id = p.id
+					WHERE x.app_account_token = p.token AND x.signed_at > a.signed_at
+						AND (x.revenue_sign = -1 OR x.notification_type IN ('EXPIRED', 'GRACE_PERIOD_EXPIRED', 'REVOKE'))
+				)
+		)
+	) AS is_pro
+FROM installs i LEFT JOIN device_models m ON m.identifier = i.device;
+`,
 }
 
 func migrate(db *sql.DB) error {

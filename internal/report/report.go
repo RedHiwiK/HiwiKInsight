@@ -458,7 +458,8 @@ func (b *builder) transactions(day string) ([]transaction, error) {
 		SELECT a.bundle_id, a.notification_type, a.subtype, a.product_id, a.revenue_sign, a.price_milli, a.amount, a.currency,
 			a.signed_at, COALESCE(pa.context, '')
 		FROM appstore_events a
-		LEFT JOIN purchase_attempts pa ON a.app_account_token != '' AND pa.token = a.app_account_token
+		LEFT JOIN v_attribution v ON v.notification_uuid = a.notification_uuid
+		LEFT JOIN purchase_attempts pa ON pa.id = v.attempt_id
 		WHERE a.environment = 'Production' AND a.revenue_sign != 0
 			AND local_date(a.signed_at) = ?
 		ORDER BY a.signed_at`, day)

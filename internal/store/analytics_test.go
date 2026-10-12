@@ -101,8 +101,13 @@ func TestWriteBatchesMaintainsDerivedTables(t *testing.T) {
 		t.Fatalf("installs first_seen=%d acquired=%d is_new=%d", firstSeen, acquired, isNew)
 	}
 
-	// Attribution: token is case-insensitive
-	a, err := s.FindAttribution("abcdef00-0000-0000-0000-000000000001")
+	// Attribution: the token is case-insensitive; a notification stored before v11 has no purchase times
+	if _, err := s.Record(Event{NotificationUUID: "n1", BundleID: "com.example.pawprint", Environment: "Production",
+		NotificationType: "ONE_TIME_CHARGE", RevenueSign: 1, PriceMilli: 18000, SignedAt: ms("2026-09-20", 12),
+		AppAccountToken: "ABCDEF00-0000-0000-0000-000000000001"}); err != nil {
+		t.Fatal(err)
+	}
+	a, err := s.FindAttribution("n1")
 	if err != nil || a == nil {
 		t.Fatalf("attribution = %v, %v", a, err)
 	}

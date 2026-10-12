@@ -478,7 +478,9 @@ func funnel(ctx context.Context, db *sql.DB, p Params) ([]Table, error) {
 			GROUP BY 1, 2
 		), sales AS (
 			SELECT pa.context, SUM(a.price_milli > 0) AS n, SUM(COALESCE(a.price_milli, 0) = 0) AS trials
-			FROM appstore_events a JOIN purchase_attempts pa ON pa.token = a.app_account_token
+			FROM appstore_events a
+			JOIN v_attribution v ON v.notification_uuid = a.notification_uuid
+			JOIN purchase_attempts pa ON pa.id = v.attempt_id
 			WHERE pa.app = ? AND a.revenue_sign = 1 AND pa.env = ? AND local_date(a.signed_at) BETWEEN ? AND ?
 			GROUP BY 1
 		), c AS (SELECT context FROM s UNION SELECT context FROM sales)
@@ -520,7 +522,9 @@ func revenue(ctx context.Context, db *sql.DB, p Params) ([]Table, error) {
 	base := `
 		WITH r AS (
 			SELECT a.*, COALESCE(NULLIF(pa.context, ''), 'unattributed') AS context, pa.install_id, pa.ts AS attempt_ts
-			FROM appstore_events a LEFT JOIN purchase_attempts pa ON pa.token = a.app_account_token AND a.app_account_token != ''
+			FROM appstore_events a
+			LEFT JOIN v_attribution v ON v.notification_uuid = a.notification_uuid
+			LEFT JOIN purchase_attempts pa ON pa.id = v.attempt_id
 			WHERE a.bundle_id = ? AND a.environment = ? AND a.revenue_sign != 0
 				AND local_date(a.signed_at) BETWEEN ? AND ?
 		)`

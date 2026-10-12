@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Attribution for apps that pass their own stable `appAccountToken` (an account ID) on every purchase, with HiwiKInsightKit 0.3.0's `beginPurchase(product:context:appAccountToken:)`. `purchase_attempts` now keeps every attempt of a token (surrogate key `id`, deduplicated by token, install and time), and the new view `v_attribution` maps each notification to one attempt: the latest attempt with the same token in the same app started no later than 5 minutes after the purchase (for renewals, refunds and expiry: after the purchase that started them). The `funnel` and `revenue` metrics, reports, transaction emails, `is_paid` and `is_pro` all resolve through it. Tokens generated per purchase resolve exactly as before.
+- `appstore_events` stores `app`, `original_transaction_id`, `transaction_reason`, `purchase_at` and `original_purchase_at` for new notifications.
+- Database migration v11 rebuilds `purchase_attempts` (existing rows kept) and recreates `v_user_summary`.
+
 ## [v1.1.0] — 2026-10-11
 
 ### Added
