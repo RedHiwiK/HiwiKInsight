@@ -8,7 +8,7 @@ HiwiKInsight is built so that you can analyze how your app is used without colle
 - **Batch context**: app version and build, OS and version, device model identifier (such as `iPhone17,1`), locale, language, region setting, App Store storefront country, environment (production, TestFlight or development), appearance (light/dark) and Dynamic Type size.
 - **Events**: built-in lifecycle, session and screen events, plus the events and parameters your app chooses to send.
 - **App Store original download time** (from `AppTransaction`), to tell new users from existing ones.
-- **A purchase token**: the random UUID passed as StoreKit's `appAccountToken`, to attribute purchases.
+- **A purchase token**: the UUID passed as StoreKit's `appAccountToken`, to attribute purchases. By default it is random per purchase. Apps that pass their own fixed account ID instead make the installs of one account linkable through this token; HiwiKInsight does not use it for anything but attribution.
 
 ## What is not collected
 

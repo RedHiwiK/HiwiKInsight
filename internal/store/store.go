@@ -91,6 +91,12 @@ type Event struct {
 	Amount           *float64 // price converted to the base currency; nil when no exchange rate
 	SignedAt         int64
 	AppAccountToken  string // appAccountToken passed by the app at purchase time, lowercased on write
+	// Used by v_attribution to pick the purchase attempt when an app reuses one token for many purchases.
+	App                   string // app key from the config
+	OriginalTransactionID string
+	TransactionReason     string // PURCHASE (user-initiated) / RENEWAL
+	PurchaseAt            int64  // transaction purchaseDate (milliseconds); 0 when the notification has no transaction
+	OriginalPurchaseAt    int64
 }
 
 // Record writes idempotently by notificationUUID; returns inserted=false when Apple retries the same notification.
@@ -98,11 +104,13 @@ func (s *Store) Record(e Event) (inserted bool, err error) {
 	res, err := s.db.Exec(`
 		INSERT OR IGNORE INTO appstore_events
 		(notification_uuid, bundle_id, environment, notification_type, subtype, product_id, transaction_id,
-		 storefront, currency, price_milli, revenue_sign, amount, signed_at, received_at, app_account_token)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 storefront, currency, price_milli, revenue_sign, amount, signed_at, received_at, app_account_token,
+		 app, original_transaction_id, transaction_reason, purchase_at, original_purchase_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		e.NotificationUUID, e.BundleID, e.Environment, e.NotificationType, e.Subtype, e.ProductID, e.TransactionID,
 		e.Storefront, e.Currency, e.PriceMilli, e.RevenueSign, e.Amount, e.SignedAt, time.Now().UnixMilli(),
-		strings.ToLower(e.AppAccountToken))
+		strings.ToLower(e.AppAccountToken),
+		e.App, e.OriginalTransactionID, e.TransactionReason, nullMillis(e.PurchaseAt), nullMillis(e.OriginalPurchaseAt))
 	if err != nil {
 		return false, err
 	}
@@ -149,4 +157,12 @@ func (s *Store) Stats(bundleID, environment string, now time.Time, loc *time.Loc
 		}
 	}
 	return st, nil
+}
+
+// nullMillis stores an unknown time as NULL rather than 0, so time comparisons in views skip it.
+func nullMillis(ms int64) any {
+	if ms <= 0 {
+		return nil
+	}
+	return ms
 }

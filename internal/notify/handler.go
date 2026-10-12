@@ -87,6 +87,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	in := mailInput{
+		AppKey:      app.Key,
 		AppName:     app.Name,
 		ProductName: h.ProductName,
 		ContextLabel: func(c string) string {
@@ -131,12 +132,15 @@ func (h *Handler) record(in *mailInput) {
 		NotificationType: p.NotificationType,
 		Subtype:          p.Subtype,
 		SignedAt:         p.SignedDate,
+		App:              in.AppKey,
 	}
 	if tx != nil {
 		ev.ProductID, ev.TransactionID, ev.Storefront = tx.ProductID, tx.TransactionID, tx.Storefront
 		ev.Currency, ev.PriceMilli = tx.Currency, tx.Price
 		ev.RevenueSign = RevenueSign[p.NotificationType]
 		ev.AppAccountToken = tx.AppAccountToken
+		ev.OriginalTransactionID, ev.TransactionReason = tx.OriginalTransactionID, tx.TransactionReason
+		ev.PurchaseAt, ev.OriginalPurchaseAt = tx.PurchaseDate, tx.OriginalPurchaseDate
 		if amount, ok := h.FX.ToBase(tx.Price, tx.Currency); ok {
 			in.Amount, ev.Amount = &amount, &amount
 		}
@@ -148,7 +152,7 @@ func (h *Handler) record(in *mailInput) {
 	}
 
 	if tx != nil && tx.AppAccountToken != "" {
-		in.Attribution = h.findAttribution(tx.AppAccountToken, p.NotificationType)
+		in.Attribution = h.findAttribution(p.NotificationUUID, p.NotificationType)
 	}
 
 	stats, err := h.Store.Stats(p.Data.BundleID, p.Data.Environment, time.Now(), tz.Location())
@@ -159,16 +163,16 @@ func (h *Handler) record(in *mailInput) {
 	in.Stats = &stats
 }
 
-// findAttribution looks up the purchase source by appAccountToken. For a first
+// findAttribution looks up the purchase source of a stored notification. For a first
 // purchase the app's purchase.started may still be in the write queue, so it retries
 // briefly; renewals, refunds and other later notifications do not wait.
-func (h *Handler) findAttribution(token, notificationType string) *store.Attribution {
+func (h *Handler) findAttribution(notificationUUID, notificationType string) *store.Attribution {
 	deadline := time.Now()
 	if notificationType == "ONE_TIME_CHARGE" || notificationType == "SUBSCRIBED" {
 		deadline = deadline.Add(h.AttributionWait)
 	}
 	for {
-		a, err := h.Store.FindAttribution(token)
+		a, err := h.Store.FindAttribution(notificationUUID)
 		if err != nil {
 			slog.Error("find attribution failed", "error", err)
 			return nil

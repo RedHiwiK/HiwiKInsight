@@ -268,10 +268,10 @@ type Attribution struct {
 	AcquiredAt   int64
 }
 
-// FindAttribution looks up attribution by token; returns nil, nil when there is no record.
-func (s *Store) FindAttribution(token string) (*Attribution, error) {
-	token = strings.ToLower(token)
-	if token == "" {
+// FindAttribution returns the purchase attempt v_attribution assigns to a stored notification;
+// nil, nil when the notification has no appAccountToken or no matching attempt.
+func (s *Store) FindAttribution(notificationUUID string) (*Attribution, error) {
+	if notificationUUID == "" {
 		return nil, nil
 	}
 	var a Attribution
@@ -280,10 +280,11 @@ func (s *Store) FindAttribution(token string) (*Attribution, error) {
 	err := s.ro.QueryRow(`
 		SELECT p.app, p.install_id, p.context, p.product, p.ts, p.app_version,
 			COALESCE(m.name, p.device), p.os_version, i.acquired_at
-		FROM purchase_attempts p
+		FROM v_attribution v
+		JOIN purchase_attempts p ON p.id = v.attempt_id
 		LEFT JOIN device_models m ON m.identifier = p.device
 		LEFT JOIN installs i ON i.app = p.app AND i.install_id = p.install_id
-		WHERE p.token = ?`, token).
+		WHERE v.notification_uuid = ?`, notificationUUID).
 		Scan(&a.App, &a.InstallID, &a.Context, &a.Product, &a.AttemptAt, &appVersion, &device, &osVersion, &acquired)
 	if err == sql.ErrNoRows {
 		return nil, nil

@@ -17,6 +17,12 @@ func TestFindAttributionWaitsForLateEvent(t *testing.T) {
 	}
 	defer st.Close()
 	h := &Handler{Store: st, AttributionWait: 3 * time.Second}
+	now := time.Now().UnixMilli()
+	if _, err := st.Record(store.Event{NotificationUUID: "n1", BundleID: "com.example.pawprint", Environment: "Production",
+		NotificationType: "ONE_TIME_CHARGE", RevenueSign: 1, PriceMilli: 18000, SignedAt: now, AppAccountToken: "TOK-1",
+		App: "pawprint", TransactionReason: "PURCHASE", PurchaseAt: now}); err != nil {
+		t.Fatal(err)
+	}
 
 	go func() {
 		time.Sleep(600 * time.Millisecond)
@@ -24,7 +30,7 @@ func TestFindAttributionWaitsForLateEvent(t *testing.T) {
 			Events: []store.AnalyticsEvent{{ID: "p1", Name: "purchase.started", TS: time.Now().UnixMilli(),
 				Params: map[string]string{"context": "pet_limit", "token": "tok-1"}}}}})
 	}()
-	if a := h.findAttribution("TOK-1", "ONE_TIME_CHARGE"); a == nil || a.Context != "pet_limit" {
+	if a := h.findAttribution("n1", "ONE_TIME_CHARGE"); a == nil || a.Context != "pet_limit" {
 		t.Fatalf("attribution = %+v", a)
 	}
 	// Renewals and other later notifications do not wait

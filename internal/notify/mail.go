@@ -42,6 +42,7 @@ type labels struct {
 }
 
 type mailInput struct {
+	AppKey       string
 	AppName      string
 	ProductName  func(id string) string
 	ContextLabel func(context string) string

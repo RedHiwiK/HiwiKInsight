@@ -29,7 +29,7 @@ Swift Package Manager:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/RedHiwiK/hiwikinsight-ios", from: "0.2.0"),
+    .package(url: "https://github.com/RedHiwiK/hiwikinsight-ios", from: "0.3.0"),
 ]
 ```
 
@@ -167,13 +167,27 @@ do {
 
 Map `context` values to display names under `apps[].paywall_contexts` in the server config.
 
+### Apps that already use appAccountToken as an account ID
+
+A transaction carries a single `appAccountToken`. If your app already passes its own fixed UUID per account (for example the account ID your backend assigns after Sign in with Apple), pass that UUID to `beginPurchase` instead of using a new one:
+
+```swift
+HiwiKInsight.signal("paywall.cta_tap", ["context": context, "product": product.id])
+HiwiKInsight.beginPurchase(product: product.id, context: context, appAccountToken: accountID) // HiwiKInsightKit 0.3.0+
+let result = try await product.purchase(options: [.appAccountToken(accountID)])
+```
+
+It records the same `purchase.started` event with `token` = your UUID (lowercase). One token then has many attempts, and the server picks one per transaction (see step 4 below). Both styles can be mixed across apps on one server.
+
+A fixed account token lets anyone with database access link the installs of one account across devices and reinstalls. HiwiKInsight uses it only for attribution: the dashboard, `describe` and `insight user` never group installs by token. Mention it in your privacy policy if you use this style.
+
 ### How attribution works end to end
 
-1. `beginPurchase` generates a UUID, records `purchase.started` with `token` = that UUID (lowercase) and flushes immediately.
-2. The server stores the attempt in `purchase_attempts` (token, app, env, install, context, product, time, app version, device, OS).
+1. `beginPurchase` records `purchase.started` with `token` = a new UUID, or the UUID you pass (lowercase), and flushes immediately.
+2. The server stores the attempt in `purchase_attempts` (token, app, env, install, context, product, time, app version, device, OS). A retried batch is not stored twice (same token, install and time).
 3. You pass the same UUID to StoreKit as `appAccountToken`. Apple includes it in the signed transaction.
-4. Apple sends an App Store Server Notification V2 to `/v1/appstore/notifications` (set up in [app-store-setup.md](app-store-setup.md)). The server verifies the signature chain, stores the transaction in `appstore_events` with `app_account_token`, converts the price to the base currency, and joins it to `purchase_attempts`. For first purchases (`ONE_TIME_CHARGE`, `SUBSCRIBED`) it waits up to 5 seconds for the `purchase.started` event to be written.
-5. The transaction email shows the source: paywall context, product, install day ("day N since install"), how many paywall views preceded it, app version and device. Renewals and refunds carry the original token, so they are attributed too.
+4. Apple sends an App Store Server Notification V2 to `/v1/appstore/notifications` (set up in [app-store-setup.md](app-store-setup.md)). The server verifies the signature chain, stores the transaction in `appstore_events` with `app_account_token`, the original transaction ID, the transaction reason and the purchase times, and converts the price to the base currency. The view `v_attribution` then picks one attempt: the **latest attempt with the same token in the same app, started no later than 5 minutes after the moment the user bought**. For a user-initiated purchase (`transactionReason` = `PURCHASE`, including a resubscription) that moment is the transaction's purchase time; for renewals, refunds and expiry it is the purchase time of the latest stored user-initiated transaction with the same `originalTransactionId`, or else the original purchase time. When no attempt qualifies, the latest attempt before the transaction itself is used; otherwise the transaction is `unattributed`. With a new UUID per purchase every token has one attempt, so this is a plain match. For first purchases (`ONE_TIME_CHARGE`, `SUBSCRIBED`) the server waits up to 5 seconds for the `purchase.started` event to be written.
+5. The transaction email shows the source: paywall context, product, install day ("day N since install"), how many paywall views preceded it, app version and device. Renewals and refunds carry the original token, so they are attributed to the purchase that started them.
 6. The `revenue` metric splits real revenue by context (`unattributed` when no token matched), product and storefront, and shows days from install to purchase; `funnel` adds verified sales and trials per context.
 
 ## 10. Environments
