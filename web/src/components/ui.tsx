@@ -1,5 +1,5 @@
 // Base components: card, KPI, segmented control, select, badge, table, states
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import clsx from 'clsx'
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, Copy, Inbox, Info, TriangleAlert } from 'lucide-react'
 import type { Cell } from '../api'
@@ -263,6 +263,7 @@ export function Select<T extends string>({
 }) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
+  const [anchor, setAnchor] = useState({ top: 0, left: 0 })
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!open) return
@@ -270,13 +271,25 @@ export function Select<T extends string>({
       if (!ref.current?.contains(e.target as Node)) setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    // The phone menu is fixed to where the button was; any outside scroll would leave it behind
+    const onScroll = (e: Event) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
     document.addEventListener('mousedown', onDoc)
     document.addEventListener('keydown', onKey)
+    document.addEventListener('scroll', onScroll, true)
     return () => {
       document.removeEventListener('mousedown', onDoc)
       document.removeEventListener('keydown', onKey)
+      document.removeEventListener('scroll', onScroll, true)
     }
   }, [open])
+  const toggle = () => {
+    const r = ref.current?.getBoundingClientRect()
+    if (r) setAnchor({ top: r.bottom + 6, left: r.left })
+    setOpen((v) => !v)
+    setQ('')
+  }
   const current = options.find((o) => o.value === value)
   const shown = q ? options.filter((o) => (o.label + (o.hint ?? '')).toLowerCase().includes(q.toLowerCase())) : options
   return (
@@ -285,14 +298,18 @@ export function Select<T extends string>({
         type="button"
         aria-label={ariaLabel}
         aria-expanded={open}
-        onClick={() => { setOpen((v) => !v); setQ('') }}
+        onClick={toggle}
         className="press flex h-8 w-full items-center justify-between gap-2 rounded-full bg-fill pr-2.5 pl-3.5 text-small font-medium text-text hover:bg-fill-strong"
       >
         <span className="truncate">{current?.label ?? placeholder ?? t('请选择', 'Select')}</span>
         <ChevronDown size={15} strokeWidth={1.75} className={clsx('shrink-0 text-text-3 transition-transform duration-[var(--spring-dur)] ease-[var(--spring)]', open && 'rotate-180')} />
       </button>
+      {/* Below sm the filter bar scrolls horizontally (overflow clips absolute children), so the menu is fixed at the button's position there */}
       {open && (
-        <div className="material-pop pop-in absolute top-full left-0 z-40 mt-1.5 w-max min-w-full max-w-[min(360px,90vw)] origin-top-left rounded-[14px] p-1.5">
+        <div
+          style={{ '--menu-top': `${anchor.top}px`, '--menu-left': `${anchor.left}px` } as CSSProperties}
+          className="material-pop pop-in fixed top-[var(--menu-top)] left-[var(--menu-left)] z-40 w-max min-w-32 max-w-[min(360px,90vw)] origin-top-left rounded-[14px] p-1.5 sm:absolute sm:top-full sm:left-0 sm:mt-1.5 sm:min-w-full"
+        >
           {searchable && (
             <input
               autoFocus
