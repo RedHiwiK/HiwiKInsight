@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v1.1.2] — 2026-10-20
+
 ### Fixed
 
 - Dashboard on phones: the app, event and currency selects opened a menu that the horizontally scrolling filter bar clipped, so switching apps was impossible; the menu now opens fixed below its button. Column charts with up to 8 buckets (active days, days from install to purchase) show every label instead of dropping alternate ones.
@@ -48,7 +50,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Deployment assets: multi-arch container image on GHCR, Docker Compose with Caddy, systemd unit, nginx example, release archives for linux and darwin (amd64, arm64).
 - Documentation in `docs/`, `AGENTS.md` for AI coding agents, English and Chinese READMEs.
 
-[Unreleased]: https://github.com/RedHiwiK/HiwiKInsight/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/RedHiwiK/HiwiKInsight/compare/v1.1.2...HEAD
+[v1.1.2]: https://github.com/RedHiwiK/HiwiKInsight/compare/v1.1.1...v1.1.2
 [v1.1.1]: https://github.com/RedHiwiK/HiwiKInsight/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/RedHiwiK/HiwiKInsight/compare/v1.0.0...v1.1.0
 [v1.0.0]: https://github.com/RedHiwiK/HiwiKInsight/releases/tag/v1.0.0
