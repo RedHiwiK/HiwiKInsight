@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Dashboard on phones: the app, event and currency selects opened a menu that the horizontally scrolling filter bar clipped, so switching apps was impossible; the menu now opens fixed below its button. Column charts with up to 8 buckets (active days, days from install to purchase) show every label instead of dropping alternate ones.
+
 ## [v1.1.1] — 2026-10-12
 
 ### Added

@@ -289,7 +289,9 @@ export function ColumnChart({
         `<div style="font-weight:600;margin-bottom:4px">${esc(tooltipLabel ? tooltipLabel(items[0].axisValue) : items[0].axisValue)}</div>` +
         tooltipRow(c, name, format(items[0].value)),
     },
-    xAxis: { type: 'category', data: categories, ...axisBase(p), splitLine: { show: false } },
+    // Buckets are few and each label matters; ECharts' automatic interval drops every other one at phone width
+    xAxis: { type: 'category', data: categories, ...axisBase(p), splitLine: { show: false },
+      axisLabel: { ...axisBase(p).axisLabel, ...(categories.length <= 8 && { interval: 0, fontSize: 11 }) } },
     yAxis: { type: 'value', ...axisBase(p), splitNumber: 4, axisLabel: { ...axisBase(p).axisLabel, formatter: format } },
     series: [{ type: 'bar', data: values, barMaxWidth: 32, itemStyle: { color: c, borderRadius: [4, 4, 0, 0] } }],
   }
