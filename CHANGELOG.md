@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v1.2.0] — 2026-10-21
+
 ### Added
 
 - Metric `today`: today so far across all apps from real-time sources (active users, new users, sessions, paywall viewers, errors, gross, sales, trials, refunds), each compared with yesterday up to the same time of day, with active users by hour and today's notifications. The Portfolio dashboard opens on a matching **Today** range (the default; Year moves to `?range=year`) that needs no app switching and refreshes every minute.
@@ -60,7 +62,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Deployment assets: multi-arch container image on GHCR, Docker Compose with Caddy, systemd unit, nginx example, release archives for linux and darwin (amd64, arm64).
 - Documentation in `docs/`, `AGENTS.md` for AI coding agents, English and Chinese READMEs.
 
-[Unreleased]: https://github.com/RedHiwiK/HiwiKInsight/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/RedHiwiK/HiwiKInsight/compare/v1.2.0...HEAD
+[v1.2.0]: https://github.com/RedHiwiK/HiwiKInsight/compare/v1.1.2...v1.2.0
 [v1.1.2]: https://github.com/RedHiwiK/HiwiKInsight/compare/v1.1.1...v1.1.2
 [v1.1.1]: https://github.com/RedHiwiK/HiwiKInsight/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/RedHiwiK/HiwiKInsight/compare/v1.0.0...v1.1.0
