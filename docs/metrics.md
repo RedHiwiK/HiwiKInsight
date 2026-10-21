@@ -40,6 +40,7 @@ GET /v1/query/metric/<name>?app=pawprint&env=production&from=2026-09-01&to=2026-
 | [`event_trend`](#event_trend) | Any event over time, optionally grouped by a param |
 | [`errors`](#errors) | Errors by id |
 | [`portfolio`](#portfolio) | Proceeds and downloads across all apps (App Store Connect) |
+| [`today`](#today) | Today so far across all apps vs. yesterday at the same time (real time) |
 | [`store_funnel`](#store_funnel) | App Store impressions to page views to downloads |
 
 ---
@@ -230,6 +231,20 @@ Extra parameters: `range` = `week`, `month`, `year` (default) or `custom` (uses 
 | `countries` | `country`, `proceeds`, `downloads` (top 12) |
 | `daily` | `day`, `proceeds`, `downloads` (last 30 report days) |
 | `feed` | `time_local`, `bundle_id`, `type`, `subtype`, `product_id`, `revenue_sign`, `amount`, `storefront`, `free` (latest 30 production notifications) |
+
+## today
+
+> Today so far across all apps (production, reporting time zone), each compared with yesterday up to the same time of day: per app and in total, active users (distinct install_ids with any event; the total sums apps), truly new users (first download day = first seen day), sessions (session.started), paywall viewers (distinct users with paywall.shown), error events, and real-time gross from App Store notifications (price in the base currency before commission, refunds subtracted) with sales (price > 0), free-trial starts and refunds; plus active users per hour today and over all of yesterday, and today's App Store notifications
+
+Covers every configured app plus any bundle with notifications in either window; `app`, `env`, `from` and `to` do not filter it. Uses only real-time sources (SDK events and App Store notifications), since App Store Connect reports lag about two days.
+
+| Table | Columns |
+|---|---|
+| `period` | `day`, `yesterday`, `now_local` (HH:MM), `hour` |
+| `kpis` | `key`, `current` (today so far), `previous` (yesterday up to the same time); keys: `gross`, `sales`, `trials`, `refunds`, `active_users`, `new_users`, `sessions`, `paywall_users`, `errors` |
+| `apps` | `bundle_id`, `app` (configured key, if any), `analytics`, `active_users`, `prev_active_users`, `new_users`, `prev_new_users`, `sessions`, `prev_sessions`, `paywall_users`, `sales`, `trials`, `refunds`, `gross`, `prev_gross`, `errors` |
+| `hourly` | `app`, `hour` (0-23), `today` (empty after the current hour), `yesterday` (whole day) |
+| `feed` | same columns as in `portfolio`, only notifications signed today |
 
 ## store_funnel
 

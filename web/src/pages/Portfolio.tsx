@@ -50,11 +50,12 @@ export function PortfolioPage() {
   const meta = useMeta()
   const navigate = useNavigate()
   const [sp, setSp] = useSearchParams()
-  // Range for the trend, revenue mix and countries: week / month / year (last 7 days / 30 days / 12 months), or custom dates
+  // Range: today (default, real-time view), or for the trend, revenue mix and countries week / month / year (last 7 days / 30 days / 12 months) or custom dates
   const customFrom = sp.get('from') ?? ''
   const customTo = sp.get('to') ?? ''
   const isCustom = /^\d{4}-\d{2}-\d{2}$/.test(customFrom) && /^\d{4}-\d{2}-\d{2}$/.test(customTo)
-  const range = isCustom ? 'custom' : ['week', 'month'].includes(sp.get('range') ?? '') ? sp.get('range')! : 'year'
+  const range = isCustom ? 'custom' : ['week', 'month', 'year'].includes(sp.get('range') ?? '') ? sp.get('range')! : 'today'
+  const isToday = range === 'today'
   const [picking, setPicking] = useState(false)
   const setRange = (patch: Record<string, string | null>) =>
     setSp((prev) => {
@@ -66,7 +67,18 @@ export function PortfolioPage() {
     queryKey: ['portfolio', range, customFrom, customTo],
     queryFn: () => api.metric('portfolio', range === 'custom' ? { range, from: customFrom, to: customTo } : { range: range === 'year' ? undefined : range }),
     placeholderData: keepPreviousData,
+    enabled: !isToday,
   })
+  // Today: real-time sources only, refreshed every minute
+  const tq = useQuery({
+    queryKey: ['today'],
+    queryFn: () => api.metric('today', {}),
+    enabled: isToday,
+    refetchInterval: 60_000,
+  })
+  const todayPeriod = rows(tq.data, 'period')[0]
+  const todayApps = rows<Row>(tq.data, 'apps')
+  const todayFeed = rows<Row>(tq.data, 'feed')
 
   const status = rows(q.data, 'status')[0]
   const synced = status?.synced === true
@@ -90,7 +102,8 @@ export function PortfolioPage() {
   const storeApps = rows<Row>(sq.data, 'apps')
 
   // App colors and names: palette slots from meta; bundles not in meta take the remaining slots; names prefer the dashboard app name
-  const bundles = [...new Set([...apps.map((a) => String(a.bundle_id)), ...meta.apps.map((a) => a.bundle), ...feed.map((f) => String(f.bundle_id))])]
+  const bundles = [...new Set([...apps.map((a) => String(a.bundle_id)), ...meta.apps.map((a) => a.bundle), ...feed.map((f) => String(f.bundle_id)),
+    ...todayApps.map((a) => String(a.bundle_id))])]
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b))
   const appOf = (b: string) => meta.apps.find((a) => a.bundle === b)
@@ -131,7 +144,10 @@ export function PortfolioPage() {
   const countries = rows<Row>(q.data, 'countries')
   const max12 = Math.max(...apps.map((a) => num(a.last_12m_proceeds)), 1)
 
-  const subtitle = synced && period
+  const subtitle = isToday
+    ? t(`全部 App 今天的实时数据${todayPeriod ? ` · 截至 ${todayPeriod.now_local}，对比昨日同一时刻` : ''}`,
+      `Today across all apps, real time${todayPeriod ? ` · as of ${todayPeriod.now_local}, vs. yesterday at the same time` : ''}`)
+    : synced && period
     ? t(`全部 App 的收入与规模 · 报表截至 ${fmtLongDay(String(period.through_day))}（太平洋时间）`,
       `Revenue and scale across all apps · reports through ${fmtLongDay(String(period.through_day))} (Pacific Time)`)
     : t('全部 App 的收入与规模', 'Revenue and scale across all apps')
@@ -212,21 +228,22 @@ export function PortfolioPage() {
           <Segmented
             value={range}
             ariaLabel={t('时间范围', 'Date range')}
-            onChange={(v) => v !== 'custom' && setRange({ range: v === 'year' ? null : v, from: null, to: null })}
+            onChange={(v) => v !== 'custom' && setRange({ range: v === 'today' ? null : v, from: null, to: null })}
             options={[
+              { value: 'today', label: t('今日', 'Today') },
               { value: 'week', label: t('周', 'Week') }, { value: 'month', label: t('月', 'Month') }, { value: 'year', label: t('年', 'Year') },
               ...(range === 'custom' ? [{ value: 'custom', label: `${customFrom.slice(5)} ~ ${customTo.slice(5)}` }] : []),
             ]}
           />
-          <button
+          {!isToday && <button
             type="button"
             aria-label={t('自定义日期', 'Custom dates')}
             onClick={() => setPicking((v) => !v)}
             className={clsx('press flex size-8 items-center justify-center rounded-full hover:bg-fill', picking || range === 'custom' ? 'text-primary' : 'text-text-2')}
           >
             <Calendar size={16} strokeWidth={1.75} />
-          </button>
-          {picking && (
+          </button>}
+          {picking && !isToday && (
             <DateRangePopover
               from={isCustom ? customFrom : byDay ? String(period.range_from) : addDays(reportDay, -29)}
               to={isCustom ? customTo : reportDay}
@@ -238,7 +255,15 @@ export function PortfolioPage() {
         </div>
       }
     >
-      {q.isPending ? (
+      {isToday ? (
+        tq.isPending ? (
+          <div className="skeleton h-[420px] w-full" />
+        ) : tq.error ? (
+          <QueryState loading={false} error={tq.error} onRetry={() => tq.refetch()}>{null}</QueryState>
+        ) : (
+          <TodayView data={tq.data} apps={todayApps} feed={todayFeed} colorOf={colorOf} nameOf={nameOf} keyOf={keyOf} productOf={productOf} />
+        )
+      ) : q.isPending ? (
         <div className="skeleton h-[420px] w-full" />
       ) : q.error ? (
         <QueryState loading={false} error={q.error} onRetry={() => q.refetch()}>{null}</QueryState>
@@ -351,7 +376,7 @@ export function PortfolioPage() {
         </>
       )}
 
-      {!q.isPending && !synced && feed.length > 0 && (
+      {!isToday && !q.isPending && !synced && feed.length > 0 && (
         <Card title={t('实时动态', 'Live feed')} info={t('App Store 服务器通知（正式环境），金额为售价', 'App Store server notifications (production); amounts are list price')}>
           <Feed feed={feed} colorOf={colorOf} nameOf={nameOf} productOf={productOf} />
         </Card>
@@ -390,5 +415,127 @@ function Feed({ feed, colorOf, nameOf, productOf }: {
         )
       })}
     </ul>
+  )
+}
+
+function TodayView({ data, apps, feed, colorOf, nameOf, keyOf, productOf }: {
+  data: Parameters<typeof rows>[0]
+  apps: Row[]
+  feed: Row[]
+  colorOf: (b: string) => string
+  nameOf: (b: string) => string
+  keyOf: (b: string) => string | undefined
+  productOf: (b: string, id: string) => string
+}) {
+  const navigate = useNavigate()
+  const period = rows(data, 'period')[0]
+  const kpi = new Map(rows<{ key: string; current: Cell; previous: Cell }>(data, 'kpis').map((r) => [r.key, r]))
+  const k = (key: string) => kpi.get(key) ?? { current: null, previous: null }
+  const hourly = rows<Row>(data, 'hourly')
+  const asOf = String(period?.now_local ?? '')
+  const vsYesterday = t(`对比昨日 0 点至 ${asOf}`, `vs. yesterday 00:00 to ${asOf}`)
+
+  const hours = Array.from({ length: 24 }, (_, h) => h)
+  const sumHour = (h: number, field: 'today' | 'yesterday') => {
+    const r = hourly.filter((x) => num(x.hour) === h)
+    if (field === 'today' && r.every((x) => x.today == null)) return null
+    return r.reduce((s, x) => s + num(x[field]), 0)
+  }
+  const hourLabel = (v: string) => `${v.padStart(2, '0')}:00`
+
+  const columns: Column<Row>[] = [
+    {
+      key: 'app', title: 'App', render: (r) => (
+        <span className="flex items-center gap-2">
+          <Dot color={colorOf(String(r.bundle_id))} />
+          <span className="font-medium">{nameOf(String(r.bundle_id))}</span>
+        </span>
+      ),
+    },
+    ...(['active_users', 'new_users', 'sessions'] as const).map((f): Column<Row> => ({
+      key: f, align: 'right', sortValue: (r) => num(r[f]),
+      title: f === 'active_users' ? t('活跃用户', 'Active users') : f === 'new_users' ? t('真新增', 'New users') : t('会话', 'Sessions'),
+      render: (r) => (r.analytics ? (
+        <span className="inline-flex items-center gap-2">
+          {fmtInt(r[f])}
+          <DeltaBadge value={delta(r[f], r[`prev_${f}`])} />
+        </span>
+      ) : <span className="text-text-3">—</span>),
+    })),
+    {
+      key: 'paywall', title: t('付费墙 → 成交', 'Paywall → Sales'), align: 'right', sortValue: (r) => num(r.paywall_users),
+      render: (r) => <span className="text-text-2">{r.analytics ? fmtInt(r.paywall_users) : '—'} → {fmtInt(r.sales)}</span>,
+    },
+    {
+      key: 'gross', title: t('流水', 'Gross'), align: 'right', sortValue: (r) => num(r.gross), render: (r) => (
+        <span className="inline-flex items-center gap-2">
+          {fmtMoney(r.gross)}
+          <DeltaBadge value={delta(r.gross, r.prev_gross)} />
+        </span>
+      ),
+    },
+    {
+      key: 'errors', title: t('错误', 'Errors'), align: 'right', sortValue: (r) => num(r.errors),
+      render: (r) => (r.analytics ? <span className={num(r.errors) > 0 ? 'text-danger' : 'text-text-3'}>{fmtInt(r.errors)}</span> : <span className="text-text-3">—</span>),
+    },
+  ]
+
+  return (
+    <>
+      <KpiRow>
+        <KpiCard label={t('今日流水', 'Gross today')} value={fmtMoney(k('gross').current)} current={k('gross').current} previous={k('gross').previous}
+          info={t(`App Store 实时通知的成交减退款，金额为售价、未扣佣金（${moneyBasis()}）；${vsYesterday}`,
+            `Sales minus refunds from App Store notifications, list price before commission (${moneyBasis()}); ${vsYesterday}`)} />
+        <KpiCard label={t('成交', 'Sales')} value={fmtInt(k('sales').current)} suffix={t('笔', '')} current={k('sales').current} previous={k('sales').previous}
+          info={t(`售价大于 0 的付费成交（买断、新订阅、续订）；${vsYesterday}`, `Paid transactions with price above 0 (purchases, new subs, renewals); ${vsYesterday}`)} />
+        <KpiCard label={t('试用开通', 'Trials started')} value={fmtInt(k('trials').current)} suffix={t('笔', '')} current={k('trials').current} previous={k('trials').previous}
+          info={t(`售价为 0 的订阅开通，不算成交；${vsYesterday}`, `Subscription starts at price 0, not counted as sales; ${vsYesterday}`)} />
+        <KpiCard label={t('退款', 'Refunds')} value={fmtInt(k('refunds').current)} suffix={t('笔', '')} current={k('refunds').current} previous={k('refunds').previous} inverse
+          info={t(`App Store 退款通知；${vsYesterday}`, `App Store refund notifications; ${vsYesterday}`)} />
+        <KpiCard label={t('活跃用户', 'Active users')} value={fmtInt(k('active_users').current)} current={k('active_users').current} previous={k('active_users').previous}
+          info={t(`今天有任意事件的去重用户，各 App 相加（正式环境）；${vsYesterday}`, `Unique users with any event today, summed across apps (production); ${vsYesterday}`)} />
+        <KpiCard label={t('真新增', 'New users')} value={fmtInt(k('new_users').current)} current={k('new_users').current} previous={k('new_users').previous}
+          info={t(`首次下载日 = 首见日的新用户；${vsYesterday}`, `Users whose first download day equals first-seen day; ${vsYesterday}`)} />
+        <KpiCard label={t('付费墙曝光', 'Paywall viewers')} value={fmtInt(k('paywall_users').current)} current={k('paywall_users').current} previous={k('paywall_users').previous}
+          info={t(`看到付费墙（paywall.shown）的去重用户，各 App 相加；${vsYesterday}`, `Unique users who saw a paywall (paywall.shown), summed across apps; ${vsYesterday}`)} />
+        <KpiCard label={t('错误', 'Errors')} value={fmtInt(k('errors').current)} suffix={t('次', '')} current={k('errors').current} previous={k('errors').previous} inverse
+          info={t(`error 事件次数；${vsYesterday}`, `error event count; ${vsYesterday}`)} />
+      </KpiRow>
+
+      <Card title={t('各 App 今日', 'Apps today')} info={t(`变化为${vsYesterday}；成交为 App Store 确认的付费笔数`, `Changes are ${vsYesterday}; sales are paid transactions confirmed by the App Store`)}>
+        <DataTable
+          columns={columns}
+          data={apps}
+          rowKey={(r) => String(r.bundle_id)}
+          defaultSort={{ key: 'active_users', desc: true }}
+          onRowClick={(r) => {
+            const key = keyOf(String(r.bundle_id))
+            if (key && r.analytics) navigate(`/overview?app=${key}`)
+          }}
+        />
+      </Card>
+
+      <Grid>
+        <Card span={7} title={t('每小时活跃', 'Active users by hour')}
+          info={t('每小时有任意事件的去重用户，各 App 相加；昨日为全天，用来看今天剩下时段的走势', 'Unique users with any event in each hour, summed across apps; yesterday covers the whole day to show the shape of the rest of today')}>
+          {hourly.length ? (
+            <TrendChart
+              height={280}
+              x={hours.map(String)}
+              xIsDay={false}
+              xFormat={{ axis: hourLabel, tooltip: hourLabel }}
+              format={fmtInt}
+              series={[
+                { name: t('今日', 'Today'), type: 'bar', color: 'var(--c1)', data: hours.map((h) => sumHour(h, 'today')) },
+                { name: t('昨日', 'Yesterday'), type: 'line', color: 'var(--c2)', data: hours.map((h) => sumHour(h, 'yesterday')) },
+              ]}
+            />
+          ) : <EmptyState />}
+        </Card>
+        <Card span={5} title={t('今日成交动态', 'Live feed today')} info={t('今天的 App Store 服务器通知（正式环境），金额为售价', "Today's App Store server notifications (production); amounts are list price")}>
+          <Feed feed={feed} colorOf={colorOf} nameOf={nameOf} productOf={productOf} />
+        </Card>
+      </Grid>
+    </>
   )
 }
