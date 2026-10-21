@@ -116,7 +116,7 @@ Called shortly after a new session starts (within `launchSourceWindow`, 1.5 s by
 HiwiKInsight.error(id: "sync.failed", category: "thrown-exception", message: "timeout")
 ```
 
-This sends an `error` event with `id`, `category` and `message`. Use a stable `id` per error kind; the `errors` metric, the Errors page and alerts group by it. Ids listed in `alerts.payment_errors` (default `purchase`, `restore`, `products.load`) alert on their first occurrence each day; other ids alert when first seen ever or when they affect `alerts.spike_users` users within an hour. Keep `message` free of personal data.
+This sends an `error` event with `id`, `category` and `message`. Use a stable `id` per error kind; the `errors` metric, the Errors page and alerts group by it. Ids listed in `alerts.payment_errors` (default `purchase`, `restore`) alert on their first occurrence each day; other ids alert when first seen ever or when they affect `alerts.spike_users` users within an hour. Keep `message` free of personal data.
 
 ## 8. User snapshot
 
