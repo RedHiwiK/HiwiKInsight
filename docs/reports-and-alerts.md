@@ -36,7 +36,7 @@ The scheduler checks every 5 minutes. Once the hour has passed, it sends any due
 
 **Daily report** (subject `Daily Report <day> · Gross <amount> · DAU <n>`):
 
-- Yesterday's gross revenue from real-time App Store notifications (before commission), sales, trials and refunds, compared with the day before.
+- Yesterday's gross revenue from real-time App Store notifications (before commission), sales, trials and refunds; gross is shown without a day-over-day change.
 - Total DAU, truly new users and sessions across apps.
 - Per app: DAU, new users, sessions, paywall views to sales, gross.
 - The day's transactions.

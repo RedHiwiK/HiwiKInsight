@@ -25,7 +25,7 @@ If a command fails with HTTP 401 or "cannot reach", tell the user how to set the
    - `funnel` - paywall funnel by entry point (context)
    - `revenue` - real App Store revenue by entry point / product / region, days from install to purchase
    - `distribution` - device, iOS version, app version, region, App Store country, language
-   - others such as `overview`, `sessions_daily`, `users`, `event_trend`, `errors`, `portfolio`, `store_funnel` - see describe
+   - others such as `overview`, `sessions_daily`, `users`, `event_trend`, `errors`, `portfolio`, `today`, `store_funnel` - see describe
    - Common flags: `--app myapp`, `--env production` (default), `--from YYYY-MM-DD --to YYYY-MM-DD` (default: last 30 days). Any other `--key value` is passed to the metric as a parameter (describe lists them).
 4. **Fall back to `insight sql "..."`** only when no metric fits: a single SELECT/WITH, max 1000 rows, 10 second timeout. Prefer the views `v_user_days`, `v_user_summary`, `v_sessions`, `v_screen_usage`. Read event parameters with `json_extract(params, '$.key')`. For dates use `local_today()` and `local_date(ms)`, which follow the server's reporting time zone; do not hard-code UTC offsets.
 5. **Inspect a single user** with `insight user <install_id> [--app myapp] [--limit 200]` (summary, activity calendar, recent events).

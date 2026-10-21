@@ -167,8 +167,8 @@ func maybe(c Cell, ok bool) Cell {
 func (b *builder) daily(day string) (*View, error) {
 	v := &View{Kicker: i18n.T("Daily Report", "运营日报"), Title: dayLabel(day, true)}
 	var dau, prevDAU, fresh, prevFresh, sessions, prevSessions int
-	var flow, prevFlow float64
-	allComparable, flowOK := true, b.flowComparable(addDays(day, -1))
+	var flow float64
+	allComparable := true
 	apps := Table{Title: i18n.T("Apps", "各 App"), Columns: []string{"App", "DAU", i18n.T("New users", "真新增"),
 		i18n.T("Sessions", "会话"), i18n.T("Paywall → Sales", "付费墙 → 成交"), i18n.T("Gross", "流水")}}
 	for _, a := range b.cfg.Apps {
@@ -187,12 +187,12 @@ func (b *builder) daily(day string) (*View, error) {
 		d, pd := toInt(k["avg_dau"][0]), toInt(k["avg_dau"][1])
 		n, pn := toInt(k["new_users"][0]), toInt(k["new_users"][1])
 		s, ps := toInt(k["sessions"][0]), toInt(k["sessions"][1])
-		f, pf := toFloat(k["net"][0]), toFloat(k["net"][1])
+		f := toFloat(k["net"][0])
 		dau, prevDAU, fresh, prevFresh = dau+d, prevDAU+pd, fresh+n, prevFresh+pn
-		sessions, prevSessions, flow, prevFlow = sessions+s, prevSessions+ps, flow+f, prevFlow+pf
+		sessions, prevSessions, flow = sessions+s, prevSessions+ps, flow+f
 		apps.Rows = append(apps.Rows, []Cell{
 			{Value: a.Name}, maybe(countCell(d, pd), ok), maybe(countCell(n, pn), ok), maybe(countCell(s, ps), ok),
-			{Value: people(fn.shown) + " → " + units(fn.sales, "sale", "sales", "笔")}, maybe(moneyCell(f, pf), flowOK),
+			{Value: people(fn.shown) + " → " + units(fn.sales, "sale", "sales", "笔")}, {Value: money(f)},
 		})
 	}
 
@@ -211,7 +211,7 @@ func (b *builder) daily(day string) (*View, error) {
 			sales++
 		}
 	}
-	v.Hero = Stat{Label: i18n.T("Yesterday's gross", "昨日流水"), Cell: maybe(moneyCell(flow, prevFlow), flowOK)}
+	v.Hero = Stat{Label: i18n.T("Yesterday's gross", "昨日流水"), Cell: Cell{Value: money(flow)}}
 	v.HeroNote = joinNonEmpty(" · ", units(sales, "sale", "sales", "笔成交"), plural(refunds, "refund", "refunds", "笔退款"),
 		plural(trials, "trial started", "trials started", "笔试用开通"),
 		i18n.T("App Store real-time notifications, before commission", "App Store 实时通知，未扣佣金"))
@@ -220,7 +220,7 @@ func (b *builder) daily(day string) (*View, error) {
 		{Label: i18n.T("New users", "真新增"), Cell: maybe(countCell(fresh, prevFresh), allComparable)},
 		{Label: i18n.T("Sessions", "会话"), Cell: maybe(countCell(sessions, prevSessions), allComparable)},
 	}
-	apps.Note = i18n.T("Changes are vs. the previous day; DAU is summed across apps", "变化为与前一天相比；各 App 的 DAU 直接相加")
+	apps.Note = i18n.T("Changes are vs. the previous day (gross is not compared); DAU is summed across apps", "变化为与前一天相比（流水不比较）；各 App 的 DAU 直接相加")
 	v.Tables = append(v.Tables, apps)
 
 	if len(txs) > 0 {
@@ -488,7 +488,7 @@ func (b *builder) transactions(day string) ([]transaction, error) {
 }
 
 // storeDay returns first downloads and proceeds per app for the newest App Store Connect sales report day not
-// after day, compared with the day before it.
+// after day; downloads are compared with the day before it, proceeds are not.
 func (b *builder) storeDay(day string) (*Table, error) {
 	var latest sql.NullString
 	if err := b.db.QueryRowContext(b.ctx, `SELECT MAX(period) FROM asc_sales WHERE frequency = 'DAILY' AND period <= ?`, day).Scan(&latest); err != nil {
@@ -508,11 +508,11 @@ func (b *builder) storeDay(day string) (*Table, error) {
 	}
 	t := &Table{Title: i18n.T("App Store · ", "商店 · ") + dayLabel(latest.String, false),
 		Columns: []string{"App", i18n.T("First downloads", "首次下载"), i18n.T("Proceeds", "到手收入")},
-		Note: i18n.T("App Store Connect sales report (Pacific time, about 2 days behind); proceeds are after commission and tax; changes are vs. the previous day",
-			"App Store Connect 销售报表（太平洋时间，约滞后 2 天），到手已扣佣金与税；变化为与前一天相比")}
+		Note: i18n.T("App Store Connect sales report (Pacific time, about 2 days behind); proceeds are after commission and tax; download changes are vs. the previous day",
+			"App Store Connect 销售报表（太平洋时间，约滞后 2 天），到手已扣佣金与税；下载变化为与前一天相比")}
 	for _, a := range b.cfg.Apps {
 		c, p := cur[a.Bundle], prev[a.Bundle]
-		t.Rows = append(t.Rows, []Cell{{Value: a.Name}, countCell(c.downloads, p.downloads), moneyCell(c.proceeds, p.proceeds)})
+		t.Rows = append(t.Rows, []Cell{{Value: a.Name}, countCell(c.downloads, p.downloads), {Value: money(c.proceeds)}})
 	}
 	return t, nil
 }

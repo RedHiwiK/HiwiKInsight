@@ -6,8 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Metric `today`: today so far across all apps from real-time sources (active users, new users, sessions, paywall viewers, errors, gross, sales, trials, refunds), each compared with yesterday up to the same time of day, with active users by hour and today's notifications. The Portfolio dashboard opens on a matching **Today** range (the default; Year moves to `?range=year`) that needs no app switching and refreshes every minute.
+
 ### Changed
 
+- The daily report no longer shows a day-over-day change for revenue (gross in the headline and per app, proceeds in the App Store table); DAU, new users, sessions and downloads keep theirs.
+- Building the dashboard pins pnpm 10.18.3 through `packageManager` in `web/package.json`.
 - `alerts.payment_errors` defaults to `[purchase, restore]`; `products.load` no longer alerts on its first occurrence, because an empty load at first launch is usually transient. Users who really cannot buy still alert through `purchase.failed` with reason `product_missing`. Add `products.load` back to `payment_errors` to keep the old behavior.
 
 ## [v1.1.2] — 2026-10-20

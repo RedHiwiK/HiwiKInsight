@@ -114,7 +114,7 @@ var mcpTools = []mcpTool{
 		Description: "Run a predefined metric with a fixed, documented definition and return JSON " +
 			"{metric, definition, app, env, from, to, tables:[{name, columns, rows}]}. " +
 			"Metrics include active_users, activity_days, retention, returning, module_usage, funnel, revenue, " +
-			"distribution, overview, sessions_daily, users, event_trend, errors, portfolio, store_funnel; " +
+			"distribution, overview, sessions_daily, users, event_trend, errors, portfolio, today, store_funnel; " +
 			"see describe for the full list and each metric's extra parameters.",
 		InputSchema: objectSchema(map[string]any{
 			"name": strProp("Metric name, e.g. retention or active_users."),

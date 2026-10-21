@@ -40,7 +40,7 @@ func portfolio(ctx context.Context, db *sql.DB, p Params) ([]Table, error) {
 		Rows: [][]any{{nullStr(latest), nullStr(earliest), latest.Valid}}}
 	if !latest.Valid {
 		// No reports synced yet: return only the live feed.
-		feed, err := portfolioFeed(ctx, db)
+		feed, err := portfolioFeed(ctx, db, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -194,7 +194,7 @@ func portfolio(ctx context.Context, db *sql.DB, p Params) ([]Table, error) {
 	}
 	daily = fillDays(daily, parseDay(day).AddDate(0, 0, -29).Format("2006-01-02"), day)
 
-	feed, err := portfolioFeed(ctx, db)
+	feed, err := portfolioFeed(ctx, db, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -351,13 +351,13 @@ func portfolioApps(ctx context.Context, db *sql.DB, p Params, thisMonth, day, la
 	return t, nil
 }
 
-// portfolioFeed returns the latest real transactions (App Store Server Notifications, production).
-func portfolioFeed(ctx context.Context, db *sql.DB) (Table, error) {
+// portfolioFeed returns the latest real transactions (App Store Server Notifications, production) signed at or after since (milliseconds).
+func portfolioFeed(ctx context.Context, db *sql.DB, since int64) (Table, error) {
 	return queryTable(ctx, db, "feed", `
 		SELECT local_datetime(signed_at) AS time_local, bundle_id, notification_type AS type, subtype,
 			product_id, revenue_sign, ROUND(amount, 2) AS amount, storefront, COALESCE(price_milli, 0) = 0 AS free
-		FROM appstore_events WHERE environment = 'Production' AND notification_type != 'TEST'
-		ORDER BY signed_at DESC LIMIT 30`)
+		FROM appstore_events WHERE environment = 'Production' AND notification_type != 'TEST' AND signed_at >= ?
+		ORDER BY signed_at DESC LIMIT 30`, since)
 }
 
 // pacific is the time zone of App Store Connect sales reports.
