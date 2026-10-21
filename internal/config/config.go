@@ -356,7 +356,7 @@ func (c *Config) applyDefaults() {
 		c.Alerts.SilentHours = 48
 	}
 	if c.Alerts.PaymentErrors == nil {
-		c.Alerts.PaymentErrors = []string{"purchase", "restore", "products.load"}
+		c.Alerts.PaymentErrors = []string{"purchase", "restore"}
 	}
 	for i := range c.Apps {
 		if c.Apps[i].Name == "" {

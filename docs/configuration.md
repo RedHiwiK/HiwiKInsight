@@ -140,7 +140,7 @@ See [reports-and-alerts.md](reports-and-alerts.md).
 | `spike_users` | int | `3` | An error seen before alerts when it affects at least this many users within an hour |
 | `report_stale_days` | int | `3` | Alert when the newest App Store Connect daily report is older than this many days |
 | `silent_hours` | int | `48` | Alert when an app that had events in the previous 7 days sends nothing for this many hours |
-| `payment_errors` | list | `[purchase, restore, products.load]` | Error ids (the `id` of `error` events) that alert on their first occurrence each day. Set `[]` to disable |
+| `payment_errors` | list | `[purchase, restore]` | Error ids (the `id` of `error` events) that alert on their first occurrence each day. Set `[]` to disable |
 
 ## `app_store_connect`
 

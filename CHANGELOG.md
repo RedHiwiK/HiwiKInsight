@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- `alerts.payment_errors` defaults to `[purchase, restore]`; `products.load` no longer alerts on its first occurrence, because an empty load at first launch is usually transient. Users who really cannot buy still alert through `purchase.failed` with reason `product_missing`. Add `products.load` back to `payment_errors` to keep the old behavior.
+
 ## [v1.1.2] — 2026-10-20
 
 ### Fixed

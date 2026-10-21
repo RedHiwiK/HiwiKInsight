@@ -74,7 +74,7 @@ Enabled by `alerts.enabled` (default `true`). Every 5 minutes the alerter checks
 | Rule | Fires when | Threshold |
 |---|---|---|
 | `purchase` | A `purchase.failed` event arrived today with a `reason` other than `user_cancelled` or `pending`; one alert per app and reason | First occurrence of the day |
-| `error` (payment) | An `error` event arrived today whose `id` is in `alerts.payment_errors` | `payment_errors`, default `purchase`, `restore`, `products.load` |
+| `error` (payment) | An `error` event arrived today whose `id` is in `alerts.payment_errors` | `payment_errors`, default `purchase`, `restore` |
 | `error` (new) | An `error` id arrived today that was never seen before | First occurrence ever |
 | `error` (spike) | An error id seen before affected many users in the last hour | `alerts.spike_users`, default 3 users |
 | `asc_stale` | The newest App Store Connect daily sales report is older than the threshold (only once reports have been synced) | `alerts.report_stale_days`, default 3 days |
@@ -90,5 +90,7 @@ alerts:
   spike_users: 3
   report_stale_days: 3
   silent_hours: 48
-  payment_errors: [purchase, restore, products.load]
+  payment_errors: [purchase, restore]
 ```
+
+`products.load` is not in the default list: an empty product load at first launch is often transient and recovers on the next load. A user who really cannot buy shows up as `purchase.failed` with reason `product_missing`, which the `purchase` rule already alerts on.

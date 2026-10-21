@@ -143,7 +143,6 @@ alerts:
   payment_errors:
     - purchase
     - restore
-    - products.load
 
 # App Store Connect API key (Users and Access > Integrations > App Store Connect API) for
 # sales and analytics reports. Leave out to disable report sync.

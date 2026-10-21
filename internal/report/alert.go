@@ -5,7 +5,7 @@ package report
 // report_sends (kind = alert:<rule>, period = date|app|id). Thresholds come from AlertRules.
 //   - purchase: a failed purchase (purchase.failed, except user cancelled / pending parental approval), on the
 //     first occurrence of the day
-//   - error: a payment-related error (AlertRules.PaymentErrors, e.g. purchase / restore / products.load) on the
+//   - error: a payment-related error (AlertRules.PaymentErrors, e.g. purchase / restore) on the
 //     first occurrence; any other error when it is seen for the first time ever, or affects >= SpikeUsers users
 //     within an hour
 //   - asc_stale: the App Store Connect daily report has not been updated for more than ReportStaleDays days
