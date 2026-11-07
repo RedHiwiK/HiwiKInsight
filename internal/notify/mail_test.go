@@ -175,6 +175,35 @@ func TestRenderScenarios(t *testing.T) {
 	}
 }
 
+func TestChatCoversChargesRefundsAndTest(t *testing.T) {
+	for typ, want := range map[string]bool{
+		"ONE_TIME_CHARGE": true, "SUBSCRIBED": true, "DID_RENEW": true, "REFUND": true, "REFUND_REVERSED": true, "TEST": true,
+		"EXPIRED": false, "DID_CHANGE_RENEWAL_STATUS": false, "DID_FAIL_TO_RENEW": false,
+	} {
+		if got := sendsToChat(typ); got != want {
+			t.Errorf("sendsToChat(%s) = %v", typ, got)
+		}
+	}
+}
+
+func TestRenderChat(t *testing.T) {
+	defer i18n.Set("en")
+	i18n.Set("en")
+	v := buildView(scenarios()["purchase"])
+	got := renderChat(v)
+	for _, want := range []string{v.AmountNote, "Today: ", "This month: "} {
+		if !strings.Contains(got, want) {
+			t.Errorf("chat body misses %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "Notification ID") {
+		t.Errorf("chat body carries notification metadata:\n%s", got)
+	}
+	if got := renderChat(buildView(mailInput{AppName: "Pawprint", Payload: payload("TEST", "", "com.example.pawprint", "Sandbox")})); got != "" {
+		t.Errorf("test notification should only have a subject, got:\n%s", got)
+	}
+}
+
 // Apple sends the first charge after a free trial as DID_RENEW; only that charge is a conversion.
 func TestTrialConversion(t *testing.T) {
 	st, err := store.Open(filepath.Join(t.TempDir(), "a.db"))
