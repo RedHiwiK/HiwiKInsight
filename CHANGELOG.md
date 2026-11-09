@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Only a subscription that starts at price 0 counts as a free trial. A price-0 one-time purchase (for example, a non-consumable redeemed with an offer code) used to show as "Trial started" in the live feed, the Today view, reports and transaction emails; it is now labeled "Free" and counted as neither a trial nor a sale.
+
 ## [v1.3.0] — 2026-11-09
 
 ### Changed
