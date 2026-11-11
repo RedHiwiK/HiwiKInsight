@@ -348,6 +348,7 @@ func (c *Config) applyDefaults() {
 	if c.Mail.From == "" {
 		c.Mail.From = c.Mail.Username
 	}
+	c.Feishu.BaseURL = strings.TrimSuffix(c.Feishu.BaseURL, "/")
 	if c.Feishu.BaseURL == "" {
 		c.Feishu.BaseURL = "https://open.feishu.cn"
 	}
@@ -413,6 +414,9 @@ func (c *Config) validate() error {
 	}
 	if f := c.Feishu; !f.Enabled() && f.AppID+f.AppSecret+f.OpenID != "" {
 		errs = append(errs, "feishu: app_id, app_secret and open_id must be set together")
+	}
+	if !strings.HasPrefix(c.Feishu.BaseURL, "https://") {
+		errs = append(errs, "feishu.base_url must start with https://")
 	}
 	keys, bundles := map[string]bool{}, map[string]bool{}
 	for i, a := range c.Apps {

@@ -8,7 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `feishu` config: charges, refunds and Apple's test notification also go to one person through a Feishu or Lark app bot.
+- `feishu` config: charges, refunds and Apple's test notification also go to one person through a Feishu or Lark app bot, with the estimated proceeds and this month's totals. Free trial starts are not sent. `base_url` must be `https://`; a trailing slash is dropped.
+- `notification_deliveries` (migration v13): transaction messages are queued per channel and sent by a background loop, so email and Feishu each retry on their own (after 1 min, 5 min, 30 min, 2 h, 6 h and 24 h) and neither is sent twice because the other failed.
+
+### Changed
+
+- The App Store notification endpoint answers 200 once the transaction and its messages are stored, and 500 only when they could not be stored. A failed email no longer makes Apple resend the notification. Without SMTP, transaction emails are no longer logged as skipped.
 - `appstore_events.offer_type` and `offer_identifier` (migration v12): the offer each transaction used, from Apple's `offerType` and `offerIdentifier`. Rows stored earlier have `0` and `''`.
 
 ### Fixed

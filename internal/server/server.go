@@ -50,6 +50,7 @@ type Server struct {
 
 	writer   *store.Writer
 	sender   mailer.Sender
+	outbox   *notify.Outbox // transaction messages, per channel
 	rates    *fx.Rates
 	reports  *report.Scheduler
 	alerter  *report.Alerter
@@ -104,10 +105,16 @@ func New(cfg *config.Config) (*Server, error) {
 		return nil, err
 	}
 
-	notifier := notify.New(cfg, st, s.sender, s.rates)
-	if f := cfg.Feishu; f.Enabled() {
-		notifier.Chat = &feishu.Sender{BaseURL: f.BaseURL, AppID: f.AppID, AppSecret: f.AppSecret, OpenID: f.OpenID}
+	var channels []notify.Channel
+	if cfg.Mail.Enabled() {
+		channels = append(channels, notify.MailChannel(s.sender))
 	}
+	if f := cfg.Feishu; f.Enabled() {
+		channels = append(channels, notify.ChatChannel("feishu",
+			&feishu.Sender{BaseURL: f.BaseURL, AppID: f.AppID, AppSecret: f.AppSecret, OpenID: f.OpenID}))
+	}
+	s.outbox = notify.NewOutbox(st, channels...)
+	notifier := notify.New(cfg, st, s.outbox, s.rates)
 	contexts := map[string]string{}
 	for _, a := range cfg.Apps {
 		for k, v := range a.PaywallContexts {
@@ -166,6 +173,7 @@ func New(cfg *config.Config) (*Server, error) {
 func (s *Server) Start() {
 	cfg := s.Config
 	go s.purgeLoop()
+	s.outbox.Loop()
 	if *cfg.Reports.Daily || *cfg.Reports.Weekly {
 		go s.reports.Loop()
 	}

@@ -37,6 +37,7 @@ cmd/insight                 CLI and MCP server; talks to /v1/query/* over HTTP o
 | Job | Interval | Notes |
 |---|---|---|
 | Event writer | 1 s or 500 events | Single goroutine draining a 1024-batch queue into SQLite |
+| Transaction message outbox | On each notification, and every minute | One loop per channel (email, Feishu) sending due `notification_deliveries` rows, with per-channel retries |
 | Raw event purge | Every 24 h | Deletes `events` older than `retention_days` |
 | Report scheduler | Every 5 min | Sends due daily/weekly reports once |
 | Alerter | Every 5 min | Production-only checks, deduplicated per day |
@@ -54,7 +55,7 @@ cmd/insight                 CLI and MCP server; talks to /v1/query/* over HTTP o
 - `installs`: first seen, acquisition time (minimum of first seen and the App Store original download time; one day earlier when `prior_usage=1`), latest version, device, OS, region, storefront, language.
 - `purchase_attempts`: one row per `purchase.started` (a token can have many when the app passes its own account ID).
 
-**App Store notifications.** `notify` verifies the signed payload, transaction and renewal info against Apple's root CA, maps `bundleId` to an app, stores the transaction in `appstore_events` (idempotent by `notificationUUID`) with its base-currency `amount`, `app_account_token`, original transaction ID, transaction reason and purchase times, resolves its purchase attempt through `v_attribution` (waiting up to 5 s for first purchases), and sends the transaction email.
+**App Store notifications.** `notify` verifies the signed payload, transaction and renewal info against Apple's root CA, maps `bundleId` to an app, stores the transaction in `appstore_events` (idempotent by `notificationUUID`) with its base-currency `amount`, `app_account_token`, original transaction ID, transaction reason and purchase times, resolves its purchase attempt through `v_attribution` (waiting up to 5 s for first purchases), and queues the transaction email and chat message in `notification_deliveries` for the outbox to send.
 
 **App Store Connect.** `asc` lists the account's apps, downloads missing daily and monthly Summary Sales Reports into `asc_sales` (logged in `asc_reports`), and downloads analytics report instances into `asc_store_engagement` and `asc_store_downloads`.
 
@@ -69,6 +70,7 @@ cmd/insight                 CLI and MCP server; talks to /v1/query/* over HTTP o
 | `daily_active` | App, env, day, install: `sessions`, `duration_s`, `events` | Forever |
 | `purchase_attempts` | One per `purchase.started` (`id`, `token`): app, env, install, context, product, time, version, device, OS | Forever |
 | `appstore_events` | One per App Store notification: type, subtype, product, transaction, storefront, currency, `price_milli`, `revenue_sign`, `amount`, `signed_at`, `app_account_token`, `app`, `original_transaction_id`, `transaction_reason`, `purchase_at`, `original_purchase_at`, `offer_type`, `offer_identifier` | Forever |
+| `notification_deliveries` | One per notification and channel: the rendered subject and body, `attempts`, `next_attempt_at`, `delivered_at`, `last_error` | Forever |
 | `asc_apps` | Apps in the App Store Connect account | Forever |
 | `asc_reports` | Fetch log of sales reports (`ok`, `empty`, ...) | Forever |
 | `asc_sales` | Summary Sales Report rows: period, month, bundle, SKU, category, units, `proceeds`, country, subscription | Forever |

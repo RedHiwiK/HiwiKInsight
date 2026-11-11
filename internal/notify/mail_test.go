@@ -180,9 +180,15 @@ func TestChatCoversChargesRefundsAndTest(t *testing.T) {
 		"ONE_TIME_CHARGE": true, "SUBSCRIBED": true, "DID_RENEW": true, "REFUND": true, "REFUND_REVERSED": true, "TEST": true,
 		"EXPIRED": false, "DID_CHANGE_RENEWAL_STATUS": false, "DID_FAIL_TO_RENEW": false,
 	} {
-		if got := sendsToChat(typ); got != want {
+		if got := sendsToChat(typ, nil); got != want {
 			t.Errorf("sendsToChat(%s) = %v", typ, got)
 		}
+	}
+	if sendsToChat("SUBSCRIBED", &appstore.TransactionInfo{OfferType: 1}) {
+		t.Error("a free-trial start was sent to chat")
+	}
+	if !sendsToChat("SUBSCRIBED", &appstore.TransactionInfo{Price: 28000}) {
+		t.Error("a paid subscription was not sent to chat")
 	}
 }
 
@@ -191,10 +197,13 @@ func TestRenderChat(t *testing.T) {
 	i18n.Set("en")
 	v := buildView(scenarios()["purchase"])
 	got := renderChat(v)
-	for _, want := range []string{v.AmountNote, "Today: ", "This month: "} {
+	for _, want := range []string{v.AmountNote, "This month: "} {
 		if !strings.Contains(got, want) {
 			t.Errorf("chat body misses %q:\n%s", want, got)
 		}
+	}
+	if strings.Contains(got+v.Headline, "oday") {
+		t.Errorf("chat message reports the day:\n%s\n%s", v.Headline, got)
 	}
 	if strings.Contains(got, "Notification ID") {
 		t.Errorf("chat body carries notification metadata:\n%s", got)

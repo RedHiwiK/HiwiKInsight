@@ -26,9 +26,9 @@ What the server does with each notification:
 3. Stores it in `appstore_events`, idempotently by `notificationUUID` (Apple's retries are not counted twice). `revenue_sign` is `+1` for `ONE_TIME_CHARGE`, `SUBSCRIBED`, `DID_RENEW` and `REFUND_REVERSED`, `-1` for `REFUND`, and `0` for everything else. A `+1` with price 0 is not a sale; it is a free-trial start only for `SUBSCRIBED` without an offer code. Other price-0 income, such as a product or free period redeemed with an offer code (`offerType` 3, stored as `offer_type` with the code's `offer_identifier`), is neither a trial nor a sale.
 4. Converts the price to the base currency (`amount`) using the day's exchange rate. If no rate is available the amount stays empty and is reported as "unconverted".
 5. Links it to the in-app purchase attempt through `appAccountToken` (see [sdk-integration.md](sdk-integration.md#how-attribution-works-end-to-end)).
-6. Sends a transaction email (or logs it when mail is not configured): type, amount, conversion and estimated proceeds (`commission_rate`), source, renewal state, and today's and this month's totals.
+6. Queues a message for each configured channel: a transaction email (type, amount, conversion and estimated proceeds (`commission_rate`), source, renewal state, and today's and this month's totals) and, with `feishu`, a short message for charges and refunds. Each channel sends and retries on its own (see [reports-and-alerts.md](reports-and-alerts.md#transaction-emails)).
 
-Only a failed email returns HTTP 500, so Apple retries (after 1, 12, 24, 48 and 72 hours); everything else returns 200 or 400.
+Only a notification that could not be stored returns HTTP 500, so Apple retries it (after 1, 12, 24, 48 and 72 hours); everything else returns 200 or 400.
 
 To check the setup, make a purchase with a sandbox account in a TestFlight or development build. Then:
 

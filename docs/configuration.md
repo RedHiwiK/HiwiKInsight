@@ -132,7 +132,7 @@ Messages are sent only when `app_id`, `app_secret` and `open_id` are all set; se
 | `app_id` | string | empty | App with a bot and the `im:message:send_as_bot` permission |
 | `app_secret` | string | empty | Use `${FEISHU_APP_SECRET}` |
 | `open_id` | string | empty | Recipient's `open_id` under this app; another app's `open_id` is rejected |
-| `base_url` | string | `https://open.feishu.cn` | `https://open.larksuite.com` for Lark |
+| `base_url` | string | `https://open.feishu.cn` | `https://open.larksuite.com` for Lark; must be `https://`, a trailing slash is dropped |
 
 ## `reports`
 

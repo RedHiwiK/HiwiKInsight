@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
@@ -69,7 +70,7 @@ func (s *Sender) post(path, token string, body, out any) error {
 	defer resp.Body.Close()
 
 	raw := new(bytes.Buffer)
-	if _, err := raw.ReadFrom(resp.Body); err != nil {
+	if _, err := raw.ReadFrom(io.LimitReader(resp.Body, 1<<20)); err != nil {
 		return err
 	}
 	var status struct {

@@ -491,6 +491,22 @@ FROM installs i LEFT JOIN device_models m ON m.identifier = i.device;
 ALTER TABLE appstore_events ADD COLUMN offer_type INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE appstore_events ADD COLUMN offer_identifier TEXT NOT NULL DEFAULT '';
 `,
+	// v13: transaction messages wait here per channel, so each channel retries on its own.
+	`
+CREATE TABLE notification_deliveries (
+	notification_uuid TEXT NOT NULL,
+	channel TEXT NOT NULL,
+	subject TEXT NOT NULL,
+	text_body TEXT NOT NULL,
+	html_body TEXT NOT NULL DEFAULT '',
+	attempts INTEGER NOT NULL DEFAULT 0,
+	next_attempt_at INTEGER NOT NULL,
+	delivered_at INTEGER,
+	last_error TEXT NOT NULL DEFAULT '',
+	PRIMARY KEY (notification_uuid, channel)
+);
+CREATE INDEX idx_deliveries_pending ON notification_deliveries(channel, next_attempt_at) WHERE delivered_at IS NULL;
+`,
 }
 
 func migrate(db *sql.DB) error {
