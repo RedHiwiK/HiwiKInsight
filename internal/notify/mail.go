@@ -20,6 +20,8 @@ type row struct{ K, V string }
 
 type mailView struct {
 	Subject    string
+	Headline   string // Subject without the daily sale counter: the first line of a chat message
+	ToChat     bool   // charges, refunds and Apple's test notification go to chat channels too
 	AppName    string
 	Label      string
 	Sandbox    bool
@@ -213,6 +215,8 @@ func buildView(in mailInput) mailView {
 		}
 	}
 
+	v.Headline = strings.Join(subj, " ")
+	v.ToChat = sendsToChat(p.NotificationType, tx)
 	if s := in.Stats; s != nil {
 		v.StatsToday = formatPeriod(s.Today, in.Currency)
 		v.StatsMonth = formatPeriod(s.Month, in.Currency)
@@ -284,6 +288,28 @@ func formatPeriod(p store.Period, currency string) string {
 		s += fmt.Sprintf(t(" (%d without an exchange rate)", "（%d 笔外币未换算）"), p.Unconverted)
 	}
 	return s
+}
+
+// sendsToChat limits chat messages to charges, refunds and Apple's test notification,
+// which confirms the setup. Free-trial starts and everything else stay in email.
+func sendsToChat(notificationType string, tx *appstore.TransactionInfo) bool {
+	if tx != nil && store.IsFreeTrial(notificationType, tx.Price, tx.OfferType) {
+		return false
+	}
+	return RevenueSign[notificationType] != 0 || notificationType == "TEST"
+}
+
+// renderChat is the body of a chat message; the headline already names the app, event,
+// amount and product. Chat reports the month only: daily counts are noise there.
+func renderChat(v mailView) string {
+	var lines []string
+	if v.AmountNote != "" {
+		lines = append(lines, v.AmountNote)
+	}
+	if v.StatsMonth != "" {
+		lines = append(lines, v.L.Month+": "+v.StatsMonth)
+	}
+	return strings.Join(lines, "\n")
 }
 
 func renderText(v mailView) string {

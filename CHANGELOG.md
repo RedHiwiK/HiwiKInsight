@@ -6,13 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `feishu` config: charges, refunds and Apple's test notification also go to one person through a Feishu or Lark app bot, with the estimated proceeds and this month's totals. Free trial starts are not sent. `base_url` must be `https://`; a trailing slash is dropped.
+- `appstore_events.offer_type` and `offer_identifier` (migration v12): the offer each transaction used, from Apple's `offerType` and `offerIdentifier`. Rows stored earlier have `0` and `''`.
+- `notification_deliveries` (migration v13): transaction messages are queued per channel and sent by a background loop, so email and Feishu each retry on their own (after 1 min, 5 min, 30 min, 2 h, 6 h and 24 h) and neither is sent twice because the other failed.
+
+### Changed
+
+- The App Store notification endpoint answers 200 once the transaction and its messages are stored, and 500 only when they could not be stored. A failed email no longer makes Apple resend the notification. Without SMTP, transaction emails are no longer logged as skipped.
+
 ### Fixed
 
 - Only a subscription that starts at price 0 without an offer code counts as a free trial. A price-0 one-time purchase used to show as "Trial started" in the live feed, the Today view, reports and transaction emails; it is now counted as neither a trial nor a sale, and labeled "Code redeemed" (with the code's campaign name in the live feed) when an offer code was used, otherwise "Free".
-
-### Added
-
-- `appstore_events.offer_type` and `offer_identifier` (migration v12): the offer each transaction used, from Apple's `offerType` and `offerIdentifier`. Rows stored earlier have `0` and `''`.
 
 ## [v1.3.0] — 2026-11-09
 

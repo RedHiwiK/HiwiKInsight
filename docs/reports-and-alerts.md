@@ -22,7 +22,11 @@ mail:
 
 Sent as each notification arrives (see [app-store-setup.md](app-store-setup.md)): notification type in plain words (purchase, new subscription, renewal, refund, expired, ...), the amount in the customer's currency, the conversion to the base currency and the estimated proceeds after `commission_rate`, the product, storefront, the purchase source found through `appAccountToken` (paywall context, install day, paywall views, app version, device), renewal information, and today's and this month's totals for the app. Sandbox notifications are marked as such.
 
-If sending fails, the notification endpoint returns HTTP 500 so Apple retries later; the transaction itself is already stored and is not counted twice.
+The email is rendered when the notification arrives and queued in `notification_deliveries`; the notification endpoint answers 200 as soon as the transaction and its messages are stored. Each channel (email, Feishu) is sent by its own background loop. A failed send is retried on that channel only, after 1 min, 5 min, 30 min, 2 h, 6 h and 24 h, and then given up with the last error kept in the row and logged as `delivery given up`. A retry sends the same text, and a repeated notification from Apple adds no second message. Queued messages survive a restart.
+
+## Feishu messages
+
+With [`feishu`](configuration.md#feishu) configured, charges, refunds and Apple's test notification also go to one person through a Feishu or Lark bot: one line naming the app, event, amount and product, the estimated proceeds, and this month's totals. Free trial starts are not charges and are not sent; other notifications, reports and alerts stay in email. Feishu works with or without mail, and is queued and retried on its own as described above.
 
 ## Daily and weekly reports
 

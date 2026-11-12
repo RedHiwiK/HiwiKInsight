@@ -53,6 +53,8 @@ func TestValidation(t *testing.T) {
 		"dashboard: {users: [{username: admin, password_hash: plain}]}",
 		"unknown_field: 1",
 		"retention_days: -5",
+		"feishu: {app_id: cli_a, open_id: ou_1}",
+		"feishu: {base_url: http://open.feishu.cn}",
 	} {
 		if _, err := Parse([]byte(bad)); err == nil {
 			t.Errorf("accepted %q", bad)

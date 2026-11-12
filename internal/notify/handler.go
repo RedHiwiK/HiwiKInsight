@@ -1,5 +1,6 @@
 // Package notify receives App Store Server Notifications V2, records them as
-// transactions and sends a transaction email for each one.
+// transactions and queues a message for each configured channel: a transaction email
+// for every notification, and a chat message for charges and refunds.
 package notify
 
 import (
@@ -11,7 +12,6 @@ import (
 	"github.com/RedHiwiK/HiwiKInsight/internal/appstore"
 	"github.com/RedHiwiK/HiwiKInsight/internal/config"
 	"github.com/RedHiwiK/HiwiKInsight/internal/fx"
-	"github.com/RedHiwiK/HiwiKInsight/internal/mailer"
 	"github.com/RedHiwiK/HiwiKInsight/internal/store"
 	"github.com/RedHiwiK/HiwiKInsight/internal/tz"
 )
@@ -20,7 +20,7 @@ import (
 type Handler struct {
 	Config   *config.Config
 	Verifier *appstore.Verifier
-	Sender   mailer.Sender
+	Outbox   *Outbox
 	Store    *store.Store
 	FX       *fx.Rates
 	// AttributionWait: the notification of a first purchase can arrive before the app's
@@ -28,8 +28,8 @@ type Handler struct {
 	AttributionWait time.Duration
 }
 
-func New(cfg *config.Config, st *store.Store, sender mailer.Sender, rates *fx.Rates) *Handler {
-	return &Handler{Config: cfg, Verifier: appstore.NewVerifier(), Sender: sender, Store: st, FX: rates,
+func New(cfg *config.Config, st *store.Store, outbox *Outbox, rates *fx.Rates) *Handler {
+	return &Handler{Config: cfg, Verifier: appstore.NewVerifier(), Outbox: outbox, Store: st, FX: rates,
 		AttributionWait: 5 * time.Second}
 }
 
@@ -42,7 +42,8 @@ func (h *Handler) ProductName(id string) string {
 }
 
 // ServeHTTP handles a notification. Apple retries non-200 responses after 1, 12, 24,
-// 48 and 72 hours, so only a failed email (worth retrying) returns 5xx.
+// 48 and 72 hours, so only a notification that could not be stored returns 5xx;
+// delivery failures are retried by the Outbox, per channel.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 256<<10)
 	var req struct {
@@ -102,16 +103,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Tx:         tx,
 		Renewal:    renewal,
 	}
-	h.record(&in)
-
-	view := buildView(in)
-	htmlBody, err := renderHTML(view)
-	if err != nil {
-		slog.Error("render html failed, fallback to text", "error", err)
-	}
-	if err := h.Sender.Send(view.Subject, renderText(view), htmlBody); err != nil {
-		slog.Error("send mail failed, Apple will retry", "error", err, "notificationUUID", p.NotificationUUID)
-		http.Error(w, "notify failed", http.StatusInternalServerError)
+	if err := h.handle(in); err != nil {
+		slog.Error("store notification failed, Apple will retry", "error", err, "notificationUUID", p.NotificationUUID)
+		http.Error(w, "store failed", http.StatusInternalServerError)
 		return
 	}
 
@@ -121,9 +115,30 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// record stores the transaction and loads today's and this month's totals.
-// Failures are logged only; the email is still sent.
-func (h *Handler) record(in *mailInput) {
+// handle stores the transaction and one message per channel, rendered now so a retry
+// sends the same text. A repeated notification adds no second message to a channel.
+func (h *Handler) handle(in mailInput) error {
+	if err := h.record(&in); err != nil {
+		return err
+	}
+	view := buildView(in)
+	var ds []store.Delivery
+	for _, c := range h.Outbox.Channels {
+		if subject, text, html, ok := c.Message(view); ok {
+			ds = append(ds, store.Delivery{NotificationUUID: in.Payload.NotificationUUID, Channel: c.Name,
+				Subject: subject, Text: text, HTML: html})
+		}
+	}
+	if err := h.Store.Enqueue(ds); err != nil {
+		return err
+	}
+	h.Outbox.Wake()
+	return nil
+}
+
+// record stores the transaction and loads today's and this month's totals. Only a
+// failed insert is returned; the rest only enriches the message and is logged.
+func (h *Handler) record(in *mailInput) error {
 	p, tx := in.Payload, in.Tx
 	ev := store.Event{
 		NotificationUUID: p.NotificationUUID,
@@ -147,7 +162,7 @@ func (h *Handler) record(in *mailInput) {
 		}
 	}
 	if inserted, err := h.Store.Record(ev); err != nil {
-		slog.Error("record event failed", "error", err, "notificationUUID", p.NotificationUUID)
+		return err
 	} else if !inserted {
 		slog.Info("duplicate notification, not counted again", "notificationUUID", p.NotificationUUID)
 	}
@@ -165,9 +180,10 @@ func (h *Handler) record(in *mailInput) {
 	stats, err := h.Store.Stats(p.Data.BundleID, p.Data.Environment, time.Now(), tz.Location())
 	if err != nil {
 		slog.Error("query stats failed", "error", err)
-		return
+		return nil
 	}
 	in.Stats = &stats
+	return nil
 }
 
 // findAttribution looks up the purchase source of a stored notification. For a first
