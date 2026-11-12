@@ -206,7 +206,6 @@ func TestExampleConfigLoads(t *testing.T) {
 	for k, v := range map[string]string{
 		"HIWIKINSIGHT_ADMIN_HASH":  "$2a$10$abcdefghijklmnopqrstuuJ6Yl7y1Ov0u6Wl1WQ4yMHnE7m1QpUUa",
 		"HIWIKINSIGHT_QUERY_TOKEN": "t", "SMTP_PASSWORD": "p", "ASC_KEY_ID": "k", "ASC_ISSUER_ID": "i", "ASC_VENDOR_NUMBER": "v",
-		"FEISHU_APP_SECRET": "s",
 	} {
 		t.Setenv(k, v)
 	}
@@ -214,7 +213,7 @@ func TestExampleConfigLoads(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(cfg.Apps) == 0 || !cfg.Mail.Enabled() || !cfg.Feishu.Enabled() || !cfg.ASC.Enabled() || len(cfg.Query.Tokens) == 0 || len(cfg.Dashboard.Users) == 0 {
+	if len(cfg.Apps) == 0 || !cfg.Mail.Enabled() || !cfg.ASC.Enabled() || len(cfg.Query.Tokens) == 0 || len(cfg.Dashboard.Users) == 0 {
 		t.Errorf("example config is incomplete: %+v", cfg)
 	}
 }
