@@ -98,6 +98,8 @@ type Event struct {
 	TransactionReason     string // PURCHASE (user-initiated) / RENEWAL
 	PurchaseAt            int64  // transaction purchaseDate (milliseconds); 0 when the notification has no transaction
 	OriginalPurchaseAt    int64
+	OfferType             int    // Apple's offerType: 1 introductory, 2 promotional, 3 offer code, 4 win-back; 0 none
+	OfferIdentifier       string // the offer's reference name (for an offer code, the campaign's name)
 }
 
 // Record writes idempotently by notificationUUID; returns inserted=false when Apple retries the same notification.
@@ -106,17 +108,31 @@ func (s *Store) Record(e Event) (inserted bool, err error) {
 		INSERT OR IGNORE INTO appstore_events
 		(notification_uuid, bundle_id, environment, notification_type, subtype, product_id, transaction_id,
 		 storefront, currency, price_milli, revenue_sign, amount, signed_at, received_at, app_account_token,
-		 app, original_transaction_id, transaction_reason, purchase_at, original_purchase_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 app, original_transaction_id, transaction_reason, purchase_at, original_purchase_at, offer_type, offer_identifier)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		e.NotificationUUID, e.BundleID, e.Environment, e.NotificationType, e.Subtype, e.ProductID, e.TransactionID,
 		e.Storefront, e.Currency, e.PriceMilli, e.RevenueSign, e.Amount, e.SignedAt, time.Now().UnixMilli(),
 		strings.ToLower(e.AppAccountToken),
-		e.App, e.OriginalTransactionID, e.TransactionReason, nullMillis(e.PurchaseAt), nullMillis(e.OriginalPurchaseAt))
+		e.App, e.OriginalTransactionID, e.TransactionReason, nullMillis(e.PurchaseAt), nullMillis(e.OriginalPurchaseAt),
+		e.OfferType, e.OfferIdentifier)
 	if err != nil {
 		return false, err
 	}
 	n, _ := res.RowsAffected()
 	return n > 0, nil
+}
+
+// OfferCode is Apple's offerType for an offer code.
+const OfferCode = 3
+
+// FreeTrialSQL matches a free-trial start: a subscription that began at price 0 without an offer code.
+// Any other price-0 income row (an offer code redeemed for a product or a free period, a free renewal)
+// is free but neither a trial nor a sale. IsFreeTrial is the same rule in Go.
+const FreeTrialSQL = `(revenue_sign = 1 AND notification_type = 'SUBSCRIBED' AND COALESCE(price_milli, 0) = 0
+	AND offer_type != 3)`
+
+func IsFreeTrial(notificationType string, priceMilli int64, offerType int) bool {
+	return notificationType == "SUBSCRIBED" && priceMilli == 0 && offerType != OfferCode
 }
 
 // TrialConversionSubtype marks the first charge after a free trial, which Apple reports
@@ -126,7 +142,7 @@ const TrialConversionSubtype = "TRIAL_CONVERSION"
 // SubtypeSQL selects the subtype of an appstore_events row aliased as a.
 const SubtypeSQL = `CASE WHEN a.notification_type = 'DID_RENEW' AND a.original_transaction_id != ''
 		AND EXISTS (SELECT 1 FROM appstore_events t WHERE t.original_transaction_id = a.original_transaction_id
-			AND t.revenue_sign = 1 AND t.price_milli = 0)
+			AND ` + FreeTrialSQL + `)
 		AND NOT EXISTS (SELECT 1 FROM appstore_events p WHERE p.original_transaction_id = a.original_transaction_id
 			AND p.revenue_sign = 1 AND p.price_milli > 0 AND p.signed_at < a.signed_at)
 		THEN '` + TrialConversionSubtype + `' ELSE a.subtype END`
@@ -143,7 +159,7 @@ func (s *Store) IsTrialConversion(notificationUUID string) (bool, error) {
 
 type Period struct {
 	Sales       int     // number of paid transactions (price > 0; free-trial starts excluded)
-	Trials      int     // free-trial starts (revenue_sign = 1 but price 0)
+	Trials      int     // free-trial starts (FreeTrialSQL)
 	Refunds     int     // number of refunds
 	Net         float64 // sales minus refunds, base currency
 	Unconverted int     // transactions left out of Net because no exchange rate was available
@@ -167,7 +183,7 @@ func (s *Store) Stats(bundleID, environment string, now time.Time, loc *time.Loc
 		err := s.db.QueryRow(`
 			SELECT
 				COALESCE(SUM(revenue_sign = 1 AND price_milli > 0), 0),
-				COALESCE(SUM(revenue_sign = 1 AND COALESCE(price_milli, 0) = 0), 0),
+				COALESCE(SUM(`+FreeTrialSQL+`), 0),
 				COALESCE(SUM(revenue_sign = -1), 0),
 				COALESCE(SUM(revenue_sign * amount), 0),
 				COALESCE(SUM(revenue_sign != 0 AND COALESCE(price_milli, 0) != 0 AND amount IS NULL), 0)
